@@ -3,42 +3,254 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WhistleDrop - Secure Upload</title>
+    <title>WhistleDrop - Secure Document Submission</title>
     <style>
-        body { font-family: sans-serif; margin: 20px; background-color: #f4f4f4; color: #333; }
-        .container { background-color: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); max-width: 500px; margin: auto; }
-        h1 { text-align: center; color: #333; }
-        label { display: block; margin-bottom: 8px; font-weight: bold; }
-        input[type="file"] { display: block; margin-bottom: 20px; width: 100%; padding: 10px; box-sizing: border-box; border: 1px solid #ddd; border-radius: 4px;}
-        input[type="submit"] { background-color: #5cb85c; color: white; padding: 10px 15px; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; }
-        input[type="submit"]:hover { background-color: #4cae4c; }
-        .message { padding: 10px; margin-top: 20px; border-radius: 4px; }
-        .success { background-color: #dff0d8; color: #3c763d; border: 1px solid #d6e9c6; }
-        .error { background-color: #f2dede; color: #a94442; border: 1px solid #ebccd1; }
+        @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap');
+
+        html, body { /* Apply to html and body for full page background */
+            height: 100%;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: #FAF8F1; /* Warm Off-White */
+            color: #4E4033; /* Dark Brown Text */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            line-height: 1.6;
+            position: relative; /* For absolute positioning of decorations */
+            overflow-x: hidden; /* Prevent horizontal scroll from decorations */
+        }
+
+        /* Subtle side "tree trunk" suggestions */
+        body::before, body::after {
+            content: '';
+            position: fixed; /* Fixed so they stay during scroll, if any */
+            top: 0;
+            bottom: 0;
+            width: 50px; /* Adjust width */
+            background: linear-gradient(to bottom, transparent, #8C5A3233, #8C5A3299, #8C5A32DD, #8C5A3299, #8C5A3233, transparent); /* Fading brown */
+            opacity: 0.2; /* Very subtle */
+            z-index: -1; /* Behind content */
+        }
+        body::before {
+            left: 10px; /* Distance from edge */
+        }
+        body::after {
+            right: 10px; /* Distance from edge */
+        }
+
+
+        .container {
+            background-color: #F3EADA; /* Light Beige/Tan */
+            padding: 30px 40px;
+            border-radius: 12px;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 550px;
+            text-align: center;
+            border-top: 5px solid #D88C4B;
+            position: relative; /* For z-index if needed above side elements, though z-index on body::before/after should handle it */
+            z-index: 1;
+        }
+
+        h1 {
+            color: #8C5A32;
+            margin-bottom: 15px;
+            font-weight: 500;
+            font-size: 2em;
+        }
+
+        p.subtitle {
+            font-size: 1em;
+            color: #6B5A4C;
+            margin-bottom: 30px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: #8C5A32;
+            text-align: left;
+        }
+
+        input[type="file"] {
+            display: block;
+            width: 100%; /* Simpler width */
+            padding: 12px;
+            margin-bottom: 25px;
+            border: 1px solid #D1C0A8;
+            border-radius: 6px;
+            background-color: #FFFDF9;
+            font-size: 0.95em;
+            box-sizing: border-box;
+            transition: border-color 0.3s ease;
+        }
+        input[type="file"]:focus {
+            border-color: #D88C4B;
+            outline: none;
+        }
+        input[type="file"]::file-selector-button {
+            background-color: #8C5A32;
+            color: #FAF8F1;
+            padding: 8px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 500;
+            margin-right: 10px;
+            transition: background-color 0.3s ease;
+        }
+        input[type="file"]::file-selector-button:hover {
+            background-color: #754C24;
+        }
+
+        input[type="submit"] {
+            background-color: #D88C4B;
+            color: white;
+            padding: 12px 25px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 1.05em;
+            font-weight: 500;
+            transition: background-color 0.3s ease, transform 0.1s ease;
+            width: 100%;
+        }
+        input[type="submit"]:hover {
+            background-color: #C37B3A;
+            transform: translateY(-1px);
+        }
+        input[type="submit"]:active {
+            transform: translateY(0px);
+        }
+
+        .message {
+            padding: 12px 15px;
+            margin-top: 20px;
+            margin-bottom: 20px;
+            border-radius: 6px;
+            font-size: 0.95em;
+            text-align: left;
+        }
+        .success {
+            background-color: #E6F2E2; color: #4A6742; border: 1px solid #A8C6A2;
+        }
+        .error {
+            background-color: #F8E5E5; color: #8F5050; border: 1px solid #D8B0B0;
+        }
+
+        .tor-notice {
+            font-size: 0.85em;
+            color: #7A6A5D;
+            margin-top: 30px;
+            line-height: 1.5;
+        }
+        .tor-notice strong { color: #8C5A32; }
+
+        .loader-container { display: none; margin-top: 20px; text-align: center; }
+        .loader-text { font-size: 0.9em; color: #8C5A32; margin-bottom: 8px; }
+        .progress-bar-container { width: 100%; background-color: #E0D4C3; border-radius: 4px; overflow: hidden; height: 10px;}
+        .progress-bar { width: 0%; height: 100%; background-color: #D88C4B; border-radius: 4px; transition: width 0.4s ease-out; }
+
+        /* Leaf Decorations - Fixed Positioning relative to viewport */
+        .leaf-decoration-top-left {
+            position: fixed; /* Changed to fixed */
+            top: 20px;
+            left: 20px;
+            font-size: 2.5em; /* You might need a specific font that renders this emoji well and consistently */
+            color: #D88C4B;
+            opacity: 0.6;
+            transform: rotate(-25deg);
+            z-index: 0; /* Ensure it's behind the main container if overlap occurs */
+        }
+         .leaf-decoration-bottom-right {
+            position: fixed; /* Changed to fixed */
+            bottom: 20px;
+            right: 20px;
+            font-size: 2.5em;
+            color: #8C5A32;
+            opacity: 0.5;
+            transform: rotate(20deg);
+            z-index: 0;
+        }
+
     </style>
 </head>
 <body>
+    <div class="leaf-decoration-top-left">🍁</div> <!-- Maple Leaf Emoji -->
+
     <div class="container">
-        <h1>WhistleDrop Secure Upload</h1>
-        <p>Upload your file. It will be encrypted on the server before being saved.</p>
+        <h1>Secure Submission</h1>
+        <p class="subtitle">Your anonymity is protected. Submit your documents securely.</p>
 
         {% with messages = get_flashed_messages(with_categories=true) %}
           {% if messages %}
             {% for category, message in messages %}
-              <div class="message {{ category }}">{{ message }}</div>
+              <div class.message {{ category }}>{{ message }}</div>
             {% endfor %}
           {% endif %}
         {% endwith %}
 
-        <form method="POST" enctype="multipart/form-data" action="{{ url_for('upload_file') }}">
-            <label for="file">Choose file to upload:</label>
+        <form id="uploadForm" method="POST" enctype="multipart/form-data" action="{{ url_for('upload_file') }}">
+            <label for="file">Choose File:</label>
             <input type="file" name="file" id="file" required>
             <input type="submit" value="Upload Securely">
         </form>
-        <p style="font-size: 0.8em; color: #666; margin-top: 20px;">
-            Your anonymity is protected. This service is designed for secure and anonymous submissions.
-            Ensure you are accessing this service via Tor for maximum protection.
+
+        <div class="loader-container" id="loaderContainer">
+            <p class="loader-text" id="loaderText">Encrypting and uploading your file...</p>
+            <div class.progress-bar-container>
+                <div class="progress-bar" id="progressBar"></div>
+            </div>
+        </div>
+
+        <p class="tor-notice">
+            For maximum security and anonymity, ensure you are accessing this service via the <strong>Tor Browser</strong>.
+            Your IP address is not logged by this service.
         </p>
     </div>
+
+    <div class="leaf-decoration-bottom-right">LeafDrop🍂</div> <!-- Fallen Leaf Emoji -->
+
+    <script>
+        // JavaScript for loader remains the same as previous version
+        const uploadForm = document.getElementById('uploadForm');
+        const loaderContainer = document.getElementById('loaderContainer');
+        const progressBar = document.getElementById('progressBar');
+        const loaderText = document.getElementById('loaderText');
+        const submitButton = uploadForm.querySelector('input[type="submit"]');
+
+        if (uploadForm) {
+            uploadForm.addEventListener('submit', function(event) {
+                const fileInput = document.getElementById('file');
+                if (fileInput.files.length === 0) { return; }
+                if(submitButton) { submitButton.disabled = true; submitButton.value = 'Processing...';}
+                loaderContainer.style.display = 'block';
+                progressBar.style.width = '0%';
+                let progress = 0;
+                loaderText.textContent = 'Preparing file...';
+                const interval = setInterval(() => {
+                    progress += 10;
+                    if (progress <= 40) { progressBar.style.width = progress + '%'; }
+                    else if (progress > 40 && progress <= 70) { loaderText.textContent = 'Encrypting data...'; progressBar.style.width = progress + '%';}
+                    else if (progress > 70 && progress < 100) { loaderText.textContent = 'Securing transmission...'; progressBar.style.width = progress + '%';}
+                    if (progress >= 95) { progressBar.style.width = '95%'; loaderText.textContent = 'Finalizing... Please wait.'; }
+                }, 200);
+            });
+        }
+        window.addEventListener('pageshow', function(event) {
+            if (submitButton) {
+                const fileInput = document.getElementById('file');
+                if (fileInput) fileInput.value = '';
+                submitButton.disabled = false; submitButton.value = 'Upload Securely';
+                if (loaderContainer) loaderContainer.style.display = 'none';
+            }
+        });
+    </script>
 </body>
 </html>

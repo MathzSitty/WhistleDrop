@@ -4,12 +4,16 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="e4858ed9-af9f-4456-821b-72f775f2afc1" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/.idea/WHISTLEDROP.iml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/inspectionProfiles/profiles_settings.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/modules.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/vcs.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+    <list default="true" id="e4858ed9-af9f-4456-821b-72f775f2afc1" name="Changes" comment="Working prototype, now it's time to make it more pretty :3">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/journalist_tool/gui_config.json" beforeDir="false" afterPath="$PROJECT_DIR$/journalist_tool/gui_config.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/journalist_tool/journalist_gui.py" beforeDir="false" afterPath="$PROJECT_DIR$/journalist_tool/journalist_gui.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/journalist_tool/public_keys_for_server/journalist_gui_key_1_public.pem" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/journalist_tool/public_keys_for_server/journalist_gui_key_2_public.pem" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/journalist_tool/public_keys_for_server/journalist_gui_key_3_public.pem" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/journalist_tool/public_keys_for_server/journalist_gui_key_4_public.pem" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/journalist_tool/public_keys_for_server/journalist_gui_key_5_public.pem" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/whistledrop_server/templates/upload.html" beforeDir="false" afterPath="$PROJECT_DIR$/whistledrop_server/templates/upload.html" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -34,18 +38,24 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent">{
-  &quot;keyToString&quot;: {
-    &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
-    &quot;Python.app.executor&quot;: &quot;Run&quot;,
-    &quot;Python.journalist_gui.executor&quot;: &quot;Run&quot;,
-    &quot;Python.tor_manager.executor&quot;: &quot;Run&quot;,
-    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
-    &quot;git-widget-placeholder&quot;: &quot;master&quot;,
-    &quot;settings.editor.selected.configurable&quot;: &quot;com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable&quot;
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "ModuleVcsDetector.initialDetectionPerformed": "true",
+    "Python.app.executor": "Run",
+    "Python.journalist_gui.executor": "Run",
+    "Python.tor_manager.executor": "Run",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.git.unshallow": "true",
+    "git-widget-placeholder": "master",
+    "last_opened_file_path": "D:/WhistleDrop/journalist_tool",
+    "settings.editor.selected.configurable": "com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable"
   }
-}</component>
+}]]></component>
+  <component name="RecentsManager">
+    <key name="CopyFile.RECENT_KEYS">
+      <recent name="D:\WhistleDrop\journalist_tool" />
+    </key>
+  </component>
   <component name="SharedIndexes">
     <attachedChunks>
       <set>
@@ -61,6 +71,15 @@
       <option name="presentableId" value="Default" />
       <updated>1746715639356</updated>
     </task>
+    <task id="LOCAL-00001" summary="Working prototype, now it's time to make it more pretty :3">
+      <option name="closed" value="true" />
+      <created>1746812648788</created>
+      <option name="number" value="00001" />
+      <option name="presentableId" value="LOCAL-00001" />
+      <option name="project" value="LOCAL" />
+      <updated>1746812648788</updated>
+    </task>
+    <option name="localTasksCounter" value="2" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -73,5 +92,9 @@
         </entry>
       </map>
     </option>
+  </component>
+  <component name="VcsManagerConfiguration">
+    <MESSAGE value="Working prototype, now it's time to make it more pretty :3" />
+    <option name="LAST_COMMIT_MESSAGE" value="Working prototype, now it's time to make it more pretty :3" />
   </component>
 </project>
