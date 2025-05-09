@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WhistleDrop - Secure Upload</title>
+    <style>
+        body { font-family: sans-serif; margin: 20px; background-color: #f4f4f4; color: #333; }
+        .container { background-color: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); max-width: 500px; margin: auto; }
+        h1 { text-align: center; color: #333; }
+        label { display: block; margin-bottom: 8px; font-weight: bold; }
+        input[type="file"] { display: block; margin-bottom: 20px; width: 100%; padding: 10px; box-sizing: border-box; border: 1px solid #ddd; border-radius: 4px;}
+        input[type="submit"] { background-color: #5cb85c; color: white; padding: 10px 15px; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; }
+        input[type="submit"]:hover { background-color: #4cae4c; }
+        .message { padding: 10px; margin-top: 20px; border-radius: 4px; }
+        .success { background-color: #dff0d8; color: #3c763d; border: 1px solid #d6e9c6; }
+        .error { background-color: #f2dede; color: #a94442; border: 1px solid #ebccd1; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>WhistleDrop Secure Upload</h1>
+        <p>Upload your file. It will be encrypted on the server before being saved.</p>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            {% for category, message in messages %}
+              <div class="message {{ category }}">{{ message }}</div>
+            {% endfor %}
+          {% endif %}
+        {% endwith %}
+
+        <form method="POST" enctype="multipart/form-data" action="{{ url_for('upload_file') }}">
+            <label for="file">Choose file to upload:</label>
+            <input type="file" name="file" id="file" required>
+            <input type="submit" value="Upload Securely">
+        </form>
+        <p style="font-size: 0.8em; color: #666; margin-top: 20px;">
+            Your anonymity is protected. This service is designed for secure and anonymous submissions.
+            Ensure you are accessing this service via Tor for maximum protection.
+        </p>
+    </div>
+</body>
+</html>

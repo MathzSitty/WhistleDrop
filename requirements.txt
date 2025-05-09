@@ -1,0 +1,7 @@
+Flask
+cryptography
+pyOpenSSL
+gunicorn
+requests[socks]
+stem
+Pillow

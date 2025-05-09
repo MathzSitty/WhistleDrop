@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.env
+venv/
+dist/
+build/
+
+# WhistleDrop specific
+whistledrop_server/data/submissions/*
+whistledrop_server/data/db/key_store.db
+# Keep .gitkeep or empty directories if you want to commit the structure
+# but not the content for 'submissions' and 'db'. For now, ignoring all content.
+
+journalist_tool/private_keys/*
+!journalist_tool/private_keys/.gitkeep # If you want to keep the dir
+journalist_tool/decrypted_submissions/*
+!journalist_tool/decrypted_submissions/.gitkeep # If you want to keep the dir
+
+# IDE / OS files
+.vscode/
+.idea/
+*.swp
+*~
+.DS_Store
