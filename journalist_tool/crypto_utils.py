@@ -1,6 +1,4 @@
 # whistledrop/journalist_tool/crypto_utils.py
-# Mirror of server's crypto_utils, especially decryption parts.
-import os
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.primitives.asymmetric import padding as asym_padding
 from cryptography.hazmat.primitives import hashes

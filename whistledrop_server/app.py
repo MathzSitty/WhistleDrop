@@ -6,8 +6,6 @@ from .config import Config
 from . import crypto_utils
 from . import key_manager
 from . import storage_manager
-import json # For new endpoint
-import os
 import threading # New import
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')

@@ -1,7 +1,5 @@
 # whistledrop/whistledrop_server/config.py
 import os
-import secrets
-import string
 
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 
@@ -41,6 +39,8 @@ class Config:
     AES_NONCE_SIZE = 12
 
     # --- Server ---
+    MAX_UPLOAD_SIZE_MB = 50
+    MAX_CONTENT_LENGTH = MAX_UPLOAD_SIZE_MB * 1024 * 1024
     SERVER_HOST = "127.0.0.1"
     SERVER_PORT = 5000
 
