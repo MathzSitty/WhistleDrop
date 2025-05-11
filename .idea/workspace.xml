@@ -4,7 +4,11 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="e4858ed9-af9f-4456-821b-72f775f2afc1" name="Changes" comment="Removed unused file." />
+    <list default="true" id="e4858ed9-af9f-4456-821b-72f775f2afc1" name="Changes" comment="Removed more unused files.">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/journalist_tool/journalist_gui.py" beforeDir="false" afterPath="$PROJECT_DIR$/journalist_tool/journalist_gui.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/requirements.txt" beforeDir="false" afterPath="$PROJECT_DIR$/requirements.txt" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -111,7 +115,15 @@
       <option name="project" value="LOCAL" />
       <updated>1747000798775</updated>
     </task>
-    <option name="localTasksCounter" value="5" />
+    <task id="LOCAL-00005" summary="Removed more unused files.">
+      <option name="closed" value="true" />
+      <created>1747001553572</created>
+      <option name="number" value="00005" />
+      <option name="presentableId" value="LOCAL-00005" />
+      <option name="project" value="LOCAL" />
+      <updated>1747001553572</updated>
+    </task>
+    <option name="localTasksCounter" value="6" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -140,6 +152,7 @@
     <MESSAGE value="Made it pretty pretty, still has some refactoring to go through though :)" />
     <MESSAGE value="Added Upload size limit and more feedback for the Whistleblower upload process." />
     <MESSAGE value="Removed unused file." />
-    <option name="LAST_COMMIT_MESSAGE" value="Removed unused file." />
+    <MESSAGE value="Removed more unused files." />
+    <option name="LAST_COMMIT_MESSAGE" value="Removed more unused files." />
   </component>
 </project>

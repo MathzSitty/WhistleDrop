@@ -10,6 +10,7 @@ import string
 import urllib.parse
 import time
 import traceback
+import keyring
 
 # Adjust path to allow imports from parent directory (whistledrop/)
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -238,7 +239,13 @@ class JournalistApp:
                 with open(CONFIG_FILE, 'r') as f:
                     config_data = json.load(f)
                     self.server_url.set(config_data.get("server_url", "http://127.0.0.1:5000"))
-                    self.api_key.set(config_data.get("api_key", ""))
+                    # Try to get API key from keyring instead of config file
+                    stored_api_key = keyring.get_password("whistledrop", "journalist_api_key")
+                    if stored_api_key:
+                        self.api_key.set(stored_api_key)
+                    else:
+                        # If not in keyring, use empty or from config (for backward compatibility)
+                        self.api_key.set(config_data.get("api_key", ""))
                     self.tor_socks_host.set(config_data.get("tor_socks_host", DEFAULT_TOR_SOCKS_HOST))
                     self.tor_socks_port.set(int(config_data.get("tor_socks_port", DEFAULT_TOR_SOCKS_PORT)))
                 self.log_message("Configuration loaded.", "INFO")
@@ -255,9 +262,31 @@ class JournalistApp:
         except tk.TclError:
             messagebox.showerror("Invalid Port", "Tor SOCKS Port must be a valid number.", parent=self.root)
             return
+        
+        # Store API key in system keyring if it's not empty
+        current_api_key = self.api_key.get()
+        if current_api_key:
+            try:
+                keyring.set_password("whistledrop", "journalist_api_key", current_api_key)
+                self.log_message("API key securely stored in system keyring")
+            except Exception as e:
+                self.log_message(f"Warning: Could not store API key in keyring: {e}", "WARNING")
+                # Ask if user wants to save API key in config file anyway
+                if messagebox.askyesno("Security Warning", 
+                                    "Could not store API key securely in system keyring.\n\n"
+                                    "Would you like to store it in the config file as plain text?\n"
+                                    "(Not recommended for production use)", parent=self.root):
+                    store_api_key_in_file = True
+                else:
+                    store_api_key_in_file = False
+            else:
+                store_api_key_in_file = False
+        else:
+            store_api_key_in_file = False
+        
         config_data = {
             "server_url": self.server_url.get(),
-            "api_key": self.api_key.get(),
+            "api_key": current_api_key if store_api_key_in_file else "",
             "tor_socks_host": self.tor_socks_host.get(),
             "tor_socks_port": port_val
         }
