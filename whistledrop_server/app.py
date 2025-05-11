@@ -6,7 +6,7 @@ from .config import Config
 from . import crypto_utils
 from . import key_manager
 from . import storage_manager
-import threading # New import
+import threading  # New import
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
@@ -17,7 +17,8 @@ Config.ensure_dirs_exist()
 key_manager.initialize_key_database()
 
 # --- Lock for RSA Key acquisition and marking ---
-rsa_key_operation_lock = threading.Lock() # New Lock
+rsa_key_operation_lock = threading.Lock()  # New Lock
+
 
 # --- Authentication Decorator for Journalist API (remains the same) ---
 # ... (decorator code as before) ...
@@ -27,7 +28,7 @@ def journalist_api_required(f):
         auth_header = request.headers.get('Authorization')
         if not auth_header:
             return jsonify({"error": "Authorization header missing"}), 401
-        
+
         try:
             auth_type, api_key = auth_header.split(None, 1)
         except ValueError:
@@ -36,8 +37,9 @@ def journalist_api_required(f):
         if auth_type.lower() != 'bearer' or api_key != Config.JOURNALIST_API_KEY:
             logger.warning(f"Failed journalist API auth attempt. Provided key: {api_key[:10]}...")
             return jsonify({"error": "Invalid or missing API key"}), 403
-        
+
         return f(*args, **kwargs)
+
     return decorated_function
 
 
@@ -45,20 +47,24 @@ def journalist_api_required(f):
 def index():
     return render_template('upload.html')
 
+
 @app.route('/upload', methods=['POST'])
 def upload_file():
     if 'file' not in request.files:
-        flash('No file part in the request.', 'error'); return redirect(url_for('index'))
-    
+        flash('No file part in the request.', 'error');
+        return redirect(url_for('index'))
+
     file = request.files['file']
     if file.filename == '':
-        flash('No file selected for uploading.', 'error'); return redirect(url_for('index'))
+        flash('No file selected for uploading.', 'error');
+        return redirect(url_for('index'))
 
     if file:
         file_data = file.read()
         original_filename = file.filename
         if not file_data:
-            flash('Uploaded file is empty.', 'error'); return redirect(url_for('index'))
+            flash('Uploaded file is empty.', 'error');
+            return redirect(url_for('index'))
 
         logger.info(f"Received file: {original_filename}, size: {len(file_data)} bytes")
 
@@ -69,7 +75,8 @@ def upload_file():
             logger.info("File data and original filename encrypted with AES-GCM.")
         except Exception as e:
             logger.error(f"AES encryption failed: {e}", exc_info=True)
-            flash('File encryption failed.', 'error'); return redirect(url_for('index'))
+            flash('File encryption failed.', 'error');
+            return redirect(url_for('index'))
         del file_data
 
         rsa_public_key_pem = None
@@ -79,37 +86,45 @@ def upload_file():
 
         with rsa_key_operation_lock:
             logger.debug("RSA key lock acquired.")
-            key_info_tuple = key_manager.get_available_public_key() # Now returns a 3-tuple
+            key_info_tuple = key_manager.get_available_public_key()  # Now returns a 3-tuple
             if not key_info_tuple:
                 logger.error("No available RSA public keys inside lock.")
             else:
-                rsa_public_key_pem, rsa_public_key_id, rsa_public_key_hint_from_db = key_info_tuple # Unpack hint
+                rsa_public_key_pem, rsa_public_key_id, rsa_public_key_hint_from_db = key_info_tuple  # Unpack hint
                 if key_manager.mark_key_as_used(rsa_public_key_id):
-                    logger.info(f"RSA public key ID {rsa_public_key_id} (Hint: {rsa_public_key_hint_from_db}) acquired and marked.")
+                    logger.info(
+                        f"RSA public key ID {rsa_public_key_id} (Hint: {rsa_public_key_hint_from_db}) acquired and marked.")
                     key_successfully_acquired_and_marked = True
                 else:
                     # This case means the key was likely used by another thread between get and mark,
                     # or DB error. The lock should prevent the former if get_available_public_key
                     # doesn't have internal race conditions for selection.
-                    logger.error(f"Failed to mark RSA key ID {rsa_public_key_id} as used immediately after acquiring. Potential contention or DB issue.")
-                    rsa_public_key_pem = None # Do not use this key
+                    logger.error(
+                        f"Failed to mark RSA key ID {rsa_public_key_id} as used immediately after acquiring. Potential contention or DB issue.")
+                    rsa_public_key_pem = None  # Do not use this key
                     rsa_public_key_id = None  # Do not use this key
             logger.debug("RSA key lock released.")
 
-
         if not key_successfully_acquired_and_marked or not rsa_public_key_pem:
-            del aes_key; del encrypted_file_data; del encrypted_original_filename
-            flash('Server error: No encryption keys available or key contention. Please try again.', 'error'); return redirect(url_for('index'))
-        
+            del aes_key;
+            del encrypted_file_data;
+            del encrypted_original_filename
+            flash('Server error: No encryption keys available or key contention. Please try again.', 'error');
+            return redirect(url_for('index'))
+
         try:
             encrypted_aes_key = crypto_utils.encrypt_rsa(aes_key, rsa_public_key_pem)
         except Exception as e:
             logger.error(f"RSA encryption of AES key failed: {e}", exc_info=True)
             # Since key was marked used, this is problematic. Ideally, un-mark it or flag for admin.
             # For now, we proceed to fail the upload.
-            logger.critical(f"RSA encryption failed for key ID {rsa_public_key_id} which was already marked as used. Manual review may be needed for this key.")
-            del aes_key; del encrypted_file_data; del encrypted_original_filename
-            flash('Server error: Failed to secure encryption key.', 'error'); return redirect(url_for('index'))
+            logger.critical(
+                f"RSA encryption failed for key ID {rsa_public_key_id} which was already marked as used. Manual review may be needed for this key.")
+            del aes_key;
+            del encrypted_file_data;
+            del encrypted_original_filename
+            flash('Server error: Failed to secure encryption key.', 'error');
+            return redirect(url_for('index'))
         del aes_key
 
         submission_id = storage_manager.save_submission(
@@ -119,8 +134,10 @@ def upload_file():
             encrypted_original_filename,
             rsa_public_key_hint_from_db
         )
-        del encrypted_file_data; del encrypted_aes_key; del encrypted_original_filename
-        
+        del encrypted_file_data;
+        del encrypted_aes_key;
+        del encrypted_original_filename
+
         if submission_id:
             # Key was already marked as used within the lock
             logger.info(f"Submission ID: {submission_id}")
@@ -129,10 +146,12 @@ def upload_file():
             logger.error("Failed to save submission to storage.")
             # If storage fails, the RSA key is still marked used. This is a "cost" but safer than reusing keys.
             flash('Server error: Failed to save submission.', 'error')
-        
+
         return redirect(url_for('index'))
 
-    flash('An unexpected error occurred.', 'error'); return redirect(url_for('index'))
+    flash('An unexpected error occurred.', 'error');
+    return redirect(url_for('index'))
+
 
 # --- Journalist Endpoints ---
 # ... (rest of app.py as before) ...

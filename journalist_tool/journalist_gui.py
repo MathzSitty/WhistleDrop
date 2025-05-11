@@ -201,9 +201,9 @@ class JournalistApp:
         self.setup_tab = ttk.Frame(self.notebook, padding=(20, 15), style="TFrame")
         self.submissions_tab = ttk.Frame(self.notebook, padding=(20, 15), style="TFrame")
         self.keys_tab = ttk.Frame(self.notebook, padding=(20, 15), style="TFrame")
-        self.notebook.add(self.setup_tab, text=' Server & Admin ')
+        self.notebook.add(self.setup_tab, text=' Connection & Uploads ')
         self.notebook.add(self.submissions_tab, text=' Submissions ')
-        self.notebook.add(self.keys_tab, text=' My Key Pairs ')
+        self.notebook.add(self.keys_tab, text=' Key generation ')
         self.notebook.pack(expand=1, fill='both', padx=10, pady=(10, 5))
 
         # --- THESE CALLS REQUIRE THE METHODS TO BE DEFINED ---
@@ -326,7 +326,7 @@ class JournalistApp:
                                              style="TLabelframe")
         pubkey_upload_frame.pack(padx=5, pady=10, fill=tk.X, expand=False)
         info_label_pubkey = ttk.Label(pubkey_upload_frame, justify=tk.LEFT, style="TLabel",
-                                      text=f"Select .pem/.pub files to upload. Keys are typically generated in 'My Key Pairs' tab \nand saved to '{os.path.basename(DEFAULT_PUBLIC_KEYS_FOR_SERVER_DIR)}'.")
+                                      text=f"Select .pem/.pub files to upload. Keys are typically generated in 'Key generation' tab \nand saved to '{os.path.basename(DEFAULT_PUBLIC_KEYS_FOR_SERVER_DIR)}'.")
         info_label_pubkey.pack(pady=(0, 10), fill=tk.X)
         ttk.Button(pubkey_upload_frame, text="Select & Upload Public Keys",
                    command=self.upload_public_keys_to_server_threaded).pack(pady=5)
@@ -789,7 +789,6 @@ if __name__ == '__main__':
                 if icon_path.endswith('.png'):
                     img = tk.PhotoImage(file=icon_path)
                     root.tk.call('wm', 'iconphoto', root._w, img)
-                    app.log_message(f"Set window icon from PNG: {icon_path}", "INFO")
                     icon_found = True;
                     break
                 elif icon_path.endswith('.ico') and os.name == 'nt':

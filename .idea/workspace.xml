@@ -6,14 +6,15 @@
   <component name="ChangeListManager">
     <list default="true" id="e4858ed9-af9f-4456-821b-72f775f2afc1" name="Changes" comment="Made it pretty pretty, still has some refactoring to go through though :)">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/journalist_tool/crypto_utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/journalist_tool/crypto_utils.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/journalist_tool/gui_config.json" beforeDir="false" afterPath="$PROJECT_DIR$/journalist_tool/gui_config.json" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/journalist_tool/journalist_gui.py" beforeDir="false" afterPath="$PROJECT_DIR$/journalist_tool/journalist_gui.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/utils/tor_manager.py" beforeDir="false" afterPath="$PROJECT_DIR$/utils/tor_manager.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/whistledrop_server/app.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/whistledrop_server/config.py" beforeDir="false" afterPath="$PROJECT_DIR$/whistledrop_server/config.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/whistledrop_server/crypto_utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/whistledrop_server/crypto_utils.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/journalist_tool/public_keys_for_server/journalist_key_1_public.pem" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/journalist_tool/public_keys_for_server/journalist_key_2_public.pem" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/journalist_tool/public_keys_for_server/journalist_key_3_public.pem" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/journalist_tool/public_keys_for_server/journalist_key_4_public.pem" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/journalist_tool/public_keys_for_server/journalist_key_5_public.pem" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/whistledrop_server/app.py" beforeDir="false" afterPath="$PROJECT_DIR$/whistledrop_server/app.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/whistledrop_server/templates/upload.html" beforeDir="false" afterPath="$PROJECT_DIR$/whistledrop_server/templates/upload.html" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -23,6 +24,18 @@
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
+  <component name="GitHubPullRequestSearchHistory">{
+  &quot;lastFilter&quot;: {
+    &quot;state&quot;: &quot;OPEN&quot;,
+    &quot;assignee&quot;: &quot;MathzSitty&quot;
+  }
+}</component>
+  <component name="GithubPullRequestsUISettings">{
+  &quot;selectedUrlAndAccountId&quot;: {
+    &quot;url&quot;: &quot;https://github.com/MathzSitty/WhistleDrop&quot;,
+    &quot;accountId&quot;: &quot;07646dd4-e020-4615-8e0b-e150a6edb8b8&quot;
+  }
+}</component>
   <component name="ProblemsViewState">
     <option name="selectedTabId" value="CurrentFile" />
   </component>
@@ -38,21 +51,21 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "Batch.start_tor_manager.executor": "Run",
-    "ModuleVcsDetector.initialDetectionPerformed": "true",
-    "Python.app.executor": "Run",
-    "Python.config.executor": "Run",
-    "Python.journalist_gui.executor": "Run",
-    "Python.tor_manager.executor": "Run",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "RunOnceActivity.git.unshallow": "true",
-    "git-widget-placeholder": "main",
-    "last_opened_file_path": "D:/WhistleDrop/whistledrop_server",
-    "settings.editor.selected.configurable": "com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;Batch.start_tor_manager.executor&quot;: &quot;Run&quot;,
+    &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
+    &quot;Python.app.executor&quot;: &quot;Run&quot;,
+    &quot;Python.config.executor&quot;: &quot;Run&quot;,
+    &quot;Python.journalist_gui.executor&quot;: &quot;Run&quot;,
+    &quot;Python.tor_manager.executor&quot;: &quot;Run&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;main&quot;,
+    &quot;last_opened_file_path&quot;: &quot;D:/WhistleDrop/whistledrop_server&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable&quot;
   }
-}]]></component>
+}</component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
       <recent name="D:\WhistleDrop\whistledrop_server" />
@@ -97,8 +110,18 @@
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
+    <option name="OPEN_GENERIC_TABS">
+      <map>
+        <entry key="554bafbb-6e3a-454b-99ff-03e7fc31132a" value="TOOL_WINDOW" />
+      </map>
+    </option>
     <option name="TAB_STATES">
       <map>
+        <entry key="554bafbb-6e3a-454b-99ff-03e7fc31132a">
+          <value>
+            <State />
+          </value>
+        </entry>
         <entry key="MAIN">
           <value>
             <State />

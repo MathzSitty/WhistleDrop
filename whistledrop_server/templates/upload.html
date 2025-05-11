@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WhistleDrop - Secure Document Submission</title>
+    <title>LeafDrop - Secure Document Submission</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap');
 
@@ -179,22 +179,84 @@
             z-index: 0;
         }
 
+        /* Popup Styles */
+        .popup-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 100;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .popup-content {
+            background-color: #F3EADA;
+            border-radius: 12px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.2);
+            padding: 25px;
+            width: 90%;
+            max-width: 500px;
+            text-align: center;
+            border-top: 5px solid #8C5A32;
+            position: relative;
+        }
+
+        .popup-title {
+            color: #8C5A32;
+            margin-bottom: 15px;
+            font-weight: 500;
+            font-size: 1.5em;
+        }
+
+        .popup-message {
+            margin-bottom: 20px;
+            color: #4E4033;
+            font-size: 1.1em;
+        }
+
+        .popup-icon {
+            font-size: 3em;
+            margin-bottom: 15px;
+            color: #4A6742;
+        }
+
+        .popup-button {
+            background-color: #8C5A32;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 1em;
+            font-weight: 500;
+            transition: background-color 0.3s ease;
+        }
+
+        .popup-button:hover {
+            background-color: #754C24;
+        }
     </style>
 </head>
 <body>
     <div class="leaf-decoration-top-left">🍁</div> <!-- Maple Leaf Emoji -->
 
     <div class="container">
-        <h1>Secure Submission</h1>
+        <h1>LeafDrop</h1>
         <p class="subtitle">Your anonymity is protected. Submit your documents securely.</p>
 
         {% with messages = get_flashed_messages(with_categories=true) %}
           {% if messages %}
             {% for category, message in messages %}
-              <div class.message {{ category }}>{{ message }}</div>
+              <div class="message {{ category }}">{{ message }}</div>
             {% endfor %}
           {% endif %}
         {% endwith %}
+
+        <div id="fileErrorMessage" class="message error" style="display: none;"></div>
 
         <form id="uploadForm" method="POST" enctype="multipart/form-data" action="{{ url_for('upload_file') }}">
             <label for="file">Choose File:</label>
@@ -204,7 +266,7 @@
 
         <div class="loader-container" id="loaderContainer">
             <p class="loader-text" id="loaderText">Encrypting and uploading your file...</p>
-            <div class.progress-bar-container>
+            <div class="progress-bar-container">
                 <div class="progress-bar" id="progressBar"></div>
             </div>
         </div>
@@ -215,19 +277,70 @@
         </p>
     </div>
 
-    <div class="leaf-decoration-bottom-right">LeafDrop🍂</div> <!-- Fallen Leaf Emoji -->
+    <div class="leaf-decoration-bottom-right">🍂</div> <!-- Fallen Leaf Emoji -->
+
+    <!-- Success Popup -->
+    <div class="popup-overlay" id="successPopup">
+        <div class="popup-content">
+            <div class="popup-icon">✅</div>
+            <h2 class="popup-title">Upload Successful!</h2>
+            <p class="popup-message" id="successPopupMessage">Your file has been securely uploaded and encrypted.</p>
+            <button class="popup-button" id="successPopupButton">Close</button>
+        </div>
+    </div>
 
     <script>
-        // JavaScript for loader remains the same as previous version
+        // JavaScript for loader and file size validation
         const uploadForm = document.getElementById('uploadForm');
         const loaderContainer = document.getElementById('loaderContainer');
         const progressBar = document.getElementById('progressBar');
         const loaderText = document.getElementById('loaderText');
         const submitButton = uploadForm.querySelector('input[type="submit"]');
+        const fileErrorMessage = document.getElementById('fileErrorMessage');
+        const successPopup = document.getElementById('successPopup');
+        const successPopupMessage = document.getElementById('successPopupMessage');
+        const successPopupButton = document.getElementById('successPopupButton');
+
+        // Check for success message from flash
+        document.addEventListener('DOMContentLoaded', function() {
+            const successMessages = document.querySelectorAll('.message.success');
+            if (successMessages.length > 0) {
+                // Extract the success message text and display in popup
+                const messageText = successMessages[0].textContent;
+                successPopupMessage.textContent = messageText;
+                
+                // Hide the flash message
+                successMessages[0].style.display = 'none';
+                
+                // Show the popup
+                successPopup.style.display = 'flex';
+            }
+        });
+
+        // Close popup when button is clicked
+        successPopupButton.addEventListener('click', function() {
+            successPopup.style.display = 'none';
+        });
 
         if (uploadForm) {
             uploadForm.addEventListener('submit', function(event) {
                 const fileInput = document.getElementById('file');
+                
+                // File size validation - 50MB limit
+                if (fileInput.files.length > 0) {
+                    const fileSize = fileInput.files[0].size;
+                    const maxSize = 50 * 1024 * 1024; // 50 MB in Bytes
+                    
+                    if (fileSize > maxSize) {
+                        event.preventDefault(); // Stop form submission
+                        fileErrorMessage.textContent = 'File is too large. Maximum file size is 50 MB.';
+                        fileErrorMessage.style.display = 'block';
+                        return false;
+                    } else {
+                        fileErrorMessage.style.display = 'none';
+                    }
+                }
+                
                 if (fileInput.files.length === 0) { return; }
                 if(submitButton) { submitButton.disabled = true; submitButton.value = 'Processing...';}
                 loaderContainer.style.display = 'block';
@@ -243,12 +356,14 @@
                 }, 200);
             });
         }
+        
         window.addEventListener('pageshow', function(event) {
             if (submitButton) {
                 const fileInput = document.getElementById('file');
                 if (fileInput) fileInput.value = '';
                 submitButton.disabled = false; submitButton.value = 'Upload Securely';
                 if (loaderContainer) loaderContainer.style.display = 'none';
+                if (fileErrorMessage) fileErrorMessage.style.display = 'none';
             }
         });
     </script>
