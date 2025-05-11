@@ -4,18 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="e4858ed9-af9f-4456-821b-72f775f2afc1" name="Changes" comment="Made it pretty pretty, still has some refactoring to go through though :)">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/journalist_tool/gui_config.json" beforeDir="false" afterPath="$PROJECT_DIR$/journalist_tool/gui_config.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/journalist_tool/journalist_gui.py" beforeDir="false" afterPath="$PROJECT_DIR$/journalist_tool/journalist_gui.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/journalist_tool/public_keys_for_server/journalist_key_1_public.pem" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/journalist_tool/public_keys_for_server/journalist_key_2_public.pem" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/journalist_tool/public_keys_for_server/journalist_key_3_public.pem" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/journalist_tool/public_keys_for_server/journalist_key_4_public.pem" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/journalist_tool/public_keys_for_server/journalist_key_5_public.pem" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/whistledrop_server/app.py" beforeDir="false" afterPath="$PROJECT_DIR$/whistledrop_server/app.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/whistledrop_server/templates/upload.html" beforeDir="false" afterPath="$PROJECT_DIR$/whistledrop_server/templates/upload.html" afterDir="false" />
-    </list>
+    <list default="true" id="e4858ed9-af9f-4456-821b-72f775f2afc1" name="Changes" comment="Removed unused file." />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -106,7 +95,23 @@
       <option name="project" value="LOCAL" />
       <updated>1746822984266</updated>
     </task>
-    <option name="localTasksCounter" value="3" />
+    <task id="LOCAL-00003" summary="Added Upload size limit and more feedback for the Whistleblower upload process.">
+      <option name="closed" value="true" />
+      <created>1747000748915</created>
+      <option name="number" value="00003" />
+      <option name="presentableId" value="LOCAL-00003" />
+      <option name="project" value="LOCAL" />
+      <updated>1747000748915</updated>
+    </task>
+    <task id="LOCAL-00004" summary="Removed unused file.">
+      <option name="closed" value="true" />
+      <created>1747000798775</created>
+      <option name="number" value="00004" />
+      <option name="presentableId" value="LOCAL-00004" />
+      <option name="project" value="LOCAL" />
+      <updated>1747000798775</updated>
+    </task>
+    <option name="localTasksCounter" value="5" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -133,6 +138,8 @@
   <component name="VcsManagerConfiguration">
     <MESSAGE value="Working prototype, now it's time to make it more pretty :3" />
     <MESSAGE value="Made it pretty pretty, still has some refactoring to go through though :)" />
-    <option name="LAST_COMMIT_MESSAGE" value="Made it pretty pretty, still has some refactoring to go through though :)" />
+    <MESSAGE value="Added Upload size limit and more feedback for the Whistleblower upload process." />
+    <MESSAGE value="Removed unused file." />
+    <option name="LAST_COMMIT_MESSAGE" value="Removed unused file." />
   </component>
 </project>
