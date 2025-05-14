@@ -1,132 +1,212 @@
 # whistledrop/journalist_tool/decrypt_tool.py
 import argparse
 import os
-import requests
 import logging
 import getpass
-from . import crypto_utils
+import sys
+from pathlib import Path
 
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-logger = logging.getLogger(__name__)
+# Adjust path to allow imports from parent directory (whistledrop/)
+current_script_dir = Path(__file__).parent.resolve()
+project_root_dir = current_script_dir.parent
+if str(project_root_dir) not in sys.path:
+    sys.path.insert(0, str(project_root_dir))
 
-DEFAULT_SERVER_BASE_URL = "http://127.0.0.1:5000"
-DEFAULT_PRIVATE_KEYS_DIR = "private_keys/"
-DEFAULT_DOWNLOAD_DIR = "decrypted_submissions/"
+from journalist_tool import crypto_utils  # Import from within the journalist_tool package
+
+logging.basicConfig(level=logging.INFO,
+                    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+                    handlers=[logging.StreamHandler(sys.stdout)])
+logger = logging.getLogger("decrypt_tool_cli_local")
+
+# Default local directories
+DEFAULT_DECRYPTED_OUTPUT_DIR = Path("decrypted_submissions/")
+DEFAULT_RSA_PRIVATE_KEYS_DIR = Path("private_keys/")  # For journalist's RSA keys (content decryption)
+DEFAULT_LOCAL_SUBMISSIONS_IMPORT_DIR = Path(
+    "local_encrypted_submissions_import/")  # Where exported submissions are placed
+
+# Standard filenames expected within each (locally imported) submission directory
+# These should match what storage_manager.py and export_submissions.py use.
+LOCAL_ENCRYPTED_FILE_NAME = "encrypted_file.dat"
+LOCAL_ENCRYPTED_AES_KEY_NAME = "encrypted_aes_key.dat"
+LOCAL_ENCRYPTED_ORIGINAL_FILENAME_NAME = "encrypted_filename.dat"
 
 
-def fetch_from_server(url: str, api_key: str | None) -> bytes | None:
-    headers = {}
-    if api_key:
-        headers["Authorization"] = f"Bearer {api_key}"
+# LOCAL_RSA_PUBLIC_KEY_HINT_NAME = "rsa_public_key_hint.txt" # Hint is read by GUI, not directly by CLI for decryption logic
+
+def load_encrypted_component(submission_dir_path: Path, component_filename: str) -> bytes | None:
+    """Loads an encrypted component file from a local submission directory."""
+    file_path = submission_dir_path / component_filename
     try:
-        # proxies = {"http": "socks5h://localhost:9050", "https": "socks5h://localhost:9050"}
-        # response = requests.get(url, headers=headers, proxies=proxies, timeout=60)
-        response = requests.get(url, headers=headers, timeout=30)
-        response.raise_for_status()
-        return response.content
-    except requests.exceptions.RequestException as e:
-        logger.error(f"Error fetching {url}: {e}")
+        with open(file_path, 'rb') as f:
+            content = f.read()
+        logger.info(f"Successfully loaded '{component_filename}' from '{submission_dir_path}'.")
+        return content
+    except FileNotFoundError:
+        logger.error(f"Encrypted component '{component_filename}' not found in '{submission_dir_path}'.")
+        return None
+    except IOError as e:
+        logger.error(f"IOError reading '{component_filename}' from '{submission_dir_path}': {e}")
         return None
 
 
-def load_private_key_pem(private_key_filename: str) -> str | None:
+def load_private_rsa_key_pem(private_key_path: Path) -> str | None:
+    """Loads the PEM content of the RSA private key used for decrypting submission content."""
     try:
-        with open(private_key_filename, 'r') as f:
+        with open(private_key_path, 'r', encoding='utf-8') as f:
             return f.read()
+    except FileNotFoundError:
+        logger.error(f"RSA private key file (for content decryption) not found at: {private_key_path}")
+        return None
     except Exception as e:
-        logger.error(f"Error reading private key file {private_key_filename}: {e}")
+        logger.error(f"Error reading RSA private key file {private_key_path}: {e}", exc_info=True)
         return None
 
 
 def main():
-    parser = argparse.ArgumentParser(description="WhistleDrop Journalist Decryption Tool (CLI)")
-    parser.add_argument("submission_id", help="The ID of the submission to decrypt.")
-    parser.add_argument("private_key_file", help=f"Filename of RSA private key PEM in '{DEFAULT_PRIVATE_KEYS_DIR}'")
-    parser.add_argument("--server_url", default=DEFAULT_SERVER_BASE_URL)
-    parser.add_argument("--api_key", help="API key for authenticating to the server's journalist endpoints.")
-    parser.add_argument("--output_dir", default=DEFAULT_DOWNLOAD_DIR)
-    # --original_filename is removed as we fetch it from server
+    parser = argparse.ArgumentParser(
+        description="WhistleDrop Journalist Decryption Tool (CLI - Local/Offline Edition). "
+                    "Decrypts a locally available, previously exported submission package."
+    )
+    parser.add_argument(
+        "--submission_path",
+        type=Path,
+        required=True,
+        help="Path to the local directory containing the encrypted submission files "
+             "(e.g., .../local_encrypted_submissions_import/submission_id_xyz/)."
+    )
+    parser.add_argument(
+        "--private_rsa_key",
+        type=Path,
+        required=True,
+        help=f"Path to the journalist's private RSA key PEM file (for decrypting submission content). "
+             f"If not absolute, assumed relative to current dir or '{DEFAULT_RSA_PRIVATE_KEYS_DIR}'."
+    )
+    parser.add_argument(
+        "--output_dir",
+        type=Path,
+        default=DEFAULT_DECRYPTED_OUTPUT_DIR,
+        help=f"Directory to save the decrypted file (default: ./{DEFAULT_DECRYPTED_OUTPUT_DIR})."
+    )
+
     args = parser.parse_args()
 
-    os.makedirs(args.output_dir, exist_ok=True)
+    # Resolve and validate submission path
+    submission_dir_path = args.submission_path.resolve()
+    if not submission_dir_path.is_dir():
+        logger.error(f"Submission path '{submission_dir_path}' is not a valid directory or does not exist.")
+        return
 
-    full_private_key_path = os.path.join(DEFAULT_PRIVATE_KEYS_DIR, args.private_key_file)
-    private_key_pem = load_private_key_pem(full_private_key_path)
-    if not private_key_pem: return
+    # Resolve and validate RSA private key path
+    rsa_private_key_path = args.private_rsa_key.resolve()
+    if not rsa_private_key_path.is_file():
+        # Try in default directory if path was relative and not found
+        alt_rsa_path = (Path.cwd() / DEFAULT_RSA_PRIVATE_KEYS_DIR / args.private_rsa_key.name).resolve()
+        if alt_rsa_path.is_file():
+            rsa_private_key_path = alt_rsa_path
+        else:
+            logger.error(f"RSA private key file not found at '{rsa_private_key_path}' or in default dir.")
+            return
 
-    # Ask for private key password
-    private_key_password = getpass.getpass(
-        f"Enter password for private key '{args.private_key_file}' (leave blank if none): ")
-    if not private_key_password: private_key_password = None  # Ensure it's None if empty
+    # Ensure output directory exists
+    output_dir_path = args.output_dir.resolve()
+    try:
+        output_dir_path.mkdir(parents=True, exist_ok=True)
+    except OSError as e:
+        logger.error(f"Could not create output directory '{output_dir_path}': {e}")
+        return
 
-    logger.info(f"Attempting to decrypt {args.submission_id} using {args.private_key_file}")
+    # Load RSA private key PEM content
+    private_key_pem_for_decryption = load_private_rsa_key_pem(rsa_private_key_path)
+    if not private_key_pem_for_decryption:
+        return
+
+    # Get password for the RSA private key (for content decryption)
+    decryption_rsa_key_password = getpass.getpass(
+        f"Enter password for RSA private key '{rsa_private_key_path.name}' (for submission content decryption, leave blank if none): "
+    )
+    if not decryption_rsa_key_password:
+        decryption_rsa_key_password = None
+
+    logger.info(f"Attempting to decrypt submission from local path: '{submission_dir_path}'")
+    logger.info(f"Using RSA decryption key: '{rsa_private_key_path.name}'")
 
     try:
-        # 1. Get package details (URLs for components)
-        package_info_url = f"{args.server_url}/journalist/submission/{args.submission_id}/package"
-        logger.info(f"Fetching package info from: {package_info_url}")
-        package_info_json = fetch_from_server(package_info_url, args.api_key)
-        if not package_info_json: logger.error("Failed to fetch package info."); return
-        package_data = requests.utils.json.loads(package_info_json)  # Using requests' json for safety
+        # 1. Load encrypted components from the local submission directory
+        logger.info("Loading encrypted components from local submission directory...")
+        encrypted_aes_key_data = load_encrypted_component(submission_dir_path, LOCAL_ENCRYPTED_AES_KEY_NAME)
+        encrypted_original_filename_data = load_encrypted_component(submission_dir_path,
+                                                                    LOCAL_ENCRYPTED_ORIGINAL_FILENAME_NAME)
+        encrypted_file_data = load_encrypted_component(submission_dir_path, LOCAL_ENCRYPTED_FILE_NAME)
 
-        # 2. Download encrypted components
-        enc_aes_key_url = package_data['encrypted_aes_key_url']
-        enc_file_url = package_data['encrypted_file_url']
-        enc_filename_url = package_data['encrypted_filename_url']
-
-        logger.info("Downloading encrypted AES key...")
-        encrypted_aes_key_data = fetch_from_server(enc_aes_key_url, args.api_key)
-        if not encrypted_aes_key_data: logger.error("Failed to download encrypted AES key."); return
-
-        logger.info("Downloading encrypted original filename...")
-        encrypted_original_filename_data = fetch_from_server(enc_filename_url, args.api_key)
-        if not encrypted_original_filename_data: logger.error("Failed to download encrypted original filename."); return
-
-        logger.info("Downloading encrypted file...")
-        encrypted_file_data = fetch_from_server(enc_file_url, args.api_key)
-        if not encrypted_file_data: logger.error("Failed to download encrypted file."); return
-
-        # 3. Decrypt AES key
-        logger.info("Decrypting AES key...")
-        decrypted_aes_key = crypto_utils.decrypt_rsa(encrypted_aes_key_data, private_key_pem, private_key_password)
-        if not decrypted_aes_key:
-            logger.error("Failed to decrypt AES key. Incorrect password or key mismatch.");
+        if not all([encrypted_aes_key_data, encrypted_original_filename_data, encrypted_file_data]):
+            logger.error("One or more encrypted components could not be loaded. Aborting decryption.")
             return
+        logger.info("All encrypted components loaded successfully from local directory.")
 
-        # 4. Decrypt original filename
+        # 2. Decrypt AES key
+        logger.info("Decrypting AES key...")
+        decrypted_aes_key = crypto_utils.decrypt_rsa(
+            encrypted_aes_key_data,
+            private_key_pem_for_decryption,
+            decryption_rsa_key_password
+        )
+        if not decrypted_aes_key:
+            logger.error("Failed to decrypt AES key. Incorrect password for RSA key or key mismatch.")
+            return
+        logger.info("AES key decrypted successfully.")
+
+        # 3. Decrypt original filename
         logger.info("Decrypting original filename...")
-        decrypted_original_filename_bytes = crypto_utils.decrypt_aes_gcm(encrypted_original_filename_data,
-                                                                         decrypted_aes_key)
-        if not decrypted_original_filename_bytes:
-            logger.warning("Failed to decrypt original filename. Using generic name.")
-            original_filename = f"{args.submission_id}_decrypted.dat"
-        else:
-            original_filename = decrypted_original_filename_bytes.decode('utf-8', errors='replace')
-            logger.info(f"Decrypted original filename: {original_filename}")
+        decrypted_original_filename_bytes = crypto_utils.decrypt_aes_gcm(
+            encrypted_original_filename_data,
+            decrypted_aes_key
+        )
 
-        # 5. Decrypt file data
-        logger.info(f"Decrypting file content (for '{original_filename}')...")
+        submission_id_for_filename = submission_dir_path.name  # Use submission dir name as fallback ID
+        original_filename_str = f"{submission_id_for_filename}_decrypted_file.dat"  # Default
+        if decrypted_original_filename_bytes:
+            try:
+                original_filename_str = decrypted_original_filename_bytes.decode('utf-8', errors='replace')
+                logger.info(f"Decrypted original filename: {original_filename_str}")
+            except Exception as e_fname_decode:
+                logger.warning(
+                    f"Could not decode original filename: {e_fname_decode}. Using default: {original_filename_str}")
+        else:
+            logger.warning(f"Failed to decrypt original filename. Using generic name: {original_filename_str}")
+
+        # 4. Decrypt file data
+        logger.info(f"Decrypting file content (for '{original_filename_str}')...")
         decrypted_file_data = crypto_utils.decrypt_aes_gcm(encrypted_file_data, decrypted_aes_key)
         if not decrypted_file_data:
-            logger.error("Failed to decrypt file data.");
+            logger.error("Failed to decrypt file data. AES-GCM decryption failed.")
             return
+        logger.info("File content decrypted successfully.")
 
-        # 6. Save decrypted file
-        # Sanitize filename (basic)
-        safe_original_filename = "".join(c for c in original_filename if c.isalnum() or c in ['.', '_', '- ']).rstrip()
-        if not safe_original_filename: safe_original_filename = f"{args.submission_id}_decrypted.dat"
+        # 5. Save decrypted file
+        safe_original_filename = "".join(
+            c for c in original_filename_str if c.isalnum() or c in ['.', '_', '-']).strip()
+        if not safe_original_filename:
+            safe_original_filename = f"{submission_id_for_filename}_decrypted_file.dat"
 
-        output_file_path = os.path.join(args.output_dir, safe_original_filename)
-        with open(output_file_path, 'wb') as f:
-            f.write(decrypted_file_data)
-        logger.info(f"Success! Decrypted file saved to: {output_file_path}")
-        print(f"\nSuccess! Decrypted file saved to: {output_file_path}")
+        output_file_path = output_dir_path / safe_original_filename
+        try:
+            with open(output_file_path, 'wb') as f_out:
+                f_out.write(decrypted_file_data)
+            logger.info(f"Success! Decrypted file saved to: {output_file_path.resolve()}")
+            print(f"\nSuccess! Decrypted file saved to: {output_file_path.resolve()}")
+        except IOError as e_save:
+            logger.error(f"Failed to save decrypted file to '{output_file_path}': {e_save}", exc_info=True)
+            print(f"\nError: Could not save decrypted file to '{output_file_path}'. Check permissions.")
 
-    except requests.exceptions.RequestException as e:
-        logger.error(f"A network error occurred: {e}")
-    except Exception as e:
-        logger.error(f"An unexpected error during decryption: {e}", exc_info=True)
+    except Exception as e_unexpected:
+        logger.error(f"An unexpected error occurred during the local decryption process: {e_unexpected}", exc_info=True)
+        print(f"An unexpected error occurred: {e_unexpected}")
 
 
 if __name__ == "__main__":
+    # Ensure default directories exist if running script directly
+    DEFAULT_DECRYPTED_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+    DEFAULT_RSA_PRIVATE_KEYS_DIR.mkdir(parents=True, exist_ok=True)
+    DEFAULT_LOCAL_SUBMISSIONS_IMPORT_DIR.mkdir(parents=True, exist_ok=True)
     main()

@@ -1,48 +1,58 @@
 # whistledrop/whistledrop_server/app.py
 import logging
 from functools import wraps
-from flask import Flask, request, render_template, flash, redirect, url_for, jsonify, send_from_directory, Response
+from flask import Flask, request, render_template, flash, redirect, url_for, jsonify, Response
 from .config import Config
 from . import crypto_utils
 from . import key_manager
-from . import storage_manager
-import threading  # New import
+from . import storage_manager  # Still used for saving and listing submissions internally
+import threading
+import os
+import datetime  # For timestamps in journalist interface
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 app.config.from_object(Config)
-Config.ensure_dirs_exist()
 key_manager.initialize_key_database()
 
-# --- Lock for RSA Key acquisition and marking ---
-rsa_key_operation_lock = threading.Lock()  # New Lock
+# Lock for RSA Key acquisition and marking
+rsa_key_operation_lock = threading.Lock()
 
 
-# --- Authentication Decorator for Journalist API (remains the same) ---
-# ... (decorator code as before) ...
-def journalist_api_required(f):
+# --- Authentication Decorator for Journalist Interface ---
+def journalist_api_key_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
         auth_header = request.headers.get('Authorization')
+        api_key_from_config = Config.WHISTLEDROP_JOURNALIST_API_KEY
+
+        if not api_key_from_config:  # Should not happen if config generates one
+            logger.critical("CRITICAL: WHISTLEDROP_JOURNALIST_API_KEY is not configured on the server!")
+            return jsonify({"error": "Server configuration error: API key not set"}), 500
+
         if not auth_header:
-            return jsonify({"error": "Authorization header missing"}), 401
+            logger.warning("Journalist Interface: Authorization header missing.")
+            return jsonify({"error": "Authorization header missing. Expected 'Bearer <API_KEY>'"}), 401
 
         try:
-            auth_type, api_key = auth_header.split(None, 1)
+            auth_type, provided_api_key = auth_header.split(None, 1)
         except ValueError:
+            logger.warning("Journalist Interface: Invalid Authorization header format.")
             return jsonify({"error": "Invalid Authorization header format. Expected 'Bearer <API_KEY>'"}), 401
 
-        if auth_type.lower() != 'bearer' or api_key != Config.JOURNALIST_API_KEY:
-            logger.warning(f"Failed journalist API auth attempt. Provided key: {api_key[:10]}...")
-            return jsonify({"error": "Invalid or missing API key"}), 403
+        if auth_type.lower() != 'bearer' or provided_api_key != api_key_from_config:
+            logger.warning(
+                f"Journalist Interface: Failed auth attempt. Provided key prefix: {provided_api_key[:10]}...")
+            return jsonify({"error": "Invalid or missing API key"}), 403  # Forbidden
 
         return f(*args, **kwargs)
 
     return decorated_function
 
 
+# --- Whistleblower Upload Routes ---
 @app.route('/', methods=['GET'])
 def index():
     return render_template('upload.html')
@@ -50,34 +60,39 @@ def index():
 
 @app.route('/upload', methods=['POST'])
 def upload_file():
+    # (Upload logic remains largely the same as in the previous SFTP version)
+    # It saves to SUBMISSIONS_DIR using storage_manager.
     if 'file' not in request.files:
-        flash('No file part in the request.', 'error');
+        flash('No file part in the request.', 'error')
         return redirect(url_for('index'))
 
     file = request.files['file']
     if file.filename == '':
-        flash('No file selected for uploading.', 'error');
+        flash('No file selected for uploading.', 'error')
         return redirect(url_for('index'))
 
     if file:
         file_data = file.read()
         original_filename = file.filename
-        if not file_data:
-            flash('Uploaded file is empty.', 'error');
+
+        if len(file_data) == 0:
+            flash('Uploaded file is empty.', 'error')
+            return redirect(url_for('index'))
+        if len(file_data) > app.config['MAX_CONTENT_LENGTH']:
+            flash(f'File exceeds maximum allowed size of {Config.MAX_UPLOAD_SIZE_MB}MB.', 'error')
             return redirect(url_for('index'))
 
-        logger.info(f"Received file: {original_filename}, size: {len(file_data)} bytes")
-
+        logger.info(f"Received file for upload: '{original_filename}', size: {len(file_data)} bytes")
         aes_key = crypto_utils.generate_aes_key()
         try:
             encrypted_file_data = crypto_utils.encrypt_aes_gcm(file_data, aes_key)
             encrypted_original_filename = crypto_utils.encrypt_aes_gcm(original_filename.encode('utf-8'), aes_key)
-            logger.info("File data and original filename encrypted with AES-GCM.")
         except Exception as e:
-            logger.error(f"AES encryption failed: {e}", exc_info=True)
-            flash('File encryption failed.', 'error');
+            logger.error(f"AES encryption failed for '{original_filename}': {e}", exc_info=True)
+            flash('Critical error during file encryption. Please try again.', 'error')
             return redirect(url_for('index'))
-        del file_data
+        finally:
+            del file_data
 
         rsa_public_key_pem = None
         rsa_public_key_id = None
@@ -85,225 +100,187 @@ def upload_file():
         key_successfully_acquired_and_marked = False
 
         with rsa_key_operation_lock:
-            logger.debug("RSA key lock acquired.")
-            key_info_tuple = key_manager.get_available_public_key()  # Now returns a 3-tuple
-            if not key_info_tuple:
-                logger.error("No available RSA public keys inside lock.")
-            else:
-                rsa_public_key_pem, rsa_public_key_id, rsa_public_key_hint_from_db = key_info_tuple  # Unpack hint
+            key_info_tuple = key_manager.get_available_public_key()
+            if key_info_tuple:
+                rsa_public_key_pem, rsa_public_key_id, rsa_public_key_hint_from_db = key_info_tuple
                 if key_manager.mark_key_as_used(rsa_public_key_id):
-                    logger.info(
-                        f"RSA public key ID {rsa_public_key_id} (Hint: {rsa_public_key_hint_from_db}) acquired and marked.")
                     key_successfully_acquired_and_marked = True
                 else:
-                    # This case means the key was likely used by another thread between get and mark,
-                    # or DB error. The lock should prevent the former if get_available_public_key
-                    # doesn't have internal race conditions for selection.
-                    logger.error(
-                        f"Failed to mark RSA key ID {rsa_public_key_id} as used immediately after acquiring. Potential contention or DB issue.")
-                    rsa_public_key_pem = None  # Do not use this key
-                    rsa_public_key_id = None  # Do not use this key
-            logger.debug("RSA key lock released.")
+                    logger.error(f"Failed to mark RSA key ID {rsa_public_key_id} as used.")
+                    rsa_public_key_pem = None  # Invalidate
+            else:
+                logger.error("No available RSA public keys in DB (within lock).")
 
         if not key_successfully_acquired_and_marked or not rsa_public_key_pem:
             del aes_key;
             del encrypted_file_data;
             del encrypted_original_filename
-            flash('Server error: No encryption keys available or key contention. Please try again.', 'error');
+            flash('Server error: Could not secure an encryption key. Please try again later.', 'error')
             return redirect(url_for('index'))
 
         try:
             encrypted_aes_key = crypto_utils.encrypt_rsa(aes_key, rsa_public_key_pem)
         except Exception as e:
-            logger.error(f"RSA encryption of AES key failed: {e}", exc_info=True)
-            # Since key was marked used, this is problematic. Ideally, un-mark it or flag for admin.
-            # For now, we proceed to fail the upload.
-            logger.critical(
-                f"RSA encryption failed for key ID {rsa_public_key_id} which was already marked as used. Manual review may be needed for this key.")
+            logger.error(f"RSA encryption of AES key failed (RSA Key ID {rsa_public_key_id}): {e}", exc_info=True)
+            logger.critical(f"RSA key ID {rsa_public_key_id} was marked used but AES key encryption failed.")
             del aes_key;
             del encrypted_file_data;
             del encrypted_original_filename
-            flash('Server error: Failed to secure encryption key.', 'error');
+            flash('Critical server error: Failed to secure encryption key.', 'error')
             return redirect(url_for('index'))
-        del aes_key
+        finally:
+            del aes_key
 
         submission_id = storage_manager.save_submission(
-            encrypted_file_data,
-            encrypted_aes_key,
-            rsa_public_key_id,
-            encrypted_original_filename,
-            rsa_public_key_hint_from_db
+            encrypted_file_data, encrypted_aes_key, rsa_public_key_id,
+            encrypted_original_filename, rsa_public_key_hint_from_db
         )
         del encrypted_file_data;
         del encrypted_aes_key;
         del encrypted_original_filename
 
         if submission_id:
-            # Key was already marked as used within the lock
-            logger.info(f"Submission ID: {submission_id}")
+            logger.info(f"Submission successful. ID: {submission_id}, Hint: '{rsa_public_key_hint_from_db}'")
             flash(f'File uploaded securely! Submission ID: {submission_id}', 'success')
         else:
-            logger.error("Failed to save submission to storage.")
-            # If storage fails, the RSA key is still marked used. This is a "cost" but safer than reusing keys.
-            flash('Server error: Failed to save submission.', 'error')
-
+            logger.error("Failed to save submission to storage manager.")
+            flash('Server error: Failed to save submission after encryption.', 'error')
         return redirect(url_for('index'))
 
-    flash('An unexpected error occurred.', 'error');
+    flash('An unexpected error occurred during upload preparation.', 'error')
     return redirect(url_for('index'))
 
 
-# --- Journalist Endpoints ---
-# ... (rest of app.py as before) ...
-@app.route('/journalist/submissions', methods=['GET'])
-@journalist_api_required
-def list_all_submissions():
-    submission_ids = storage_manager.list_submissions()
-    submissions_with_hints = []
+# --- Journalist Interface Routes (for Metadaten-Abruf) ---
+JOURNALIST_INTERFACE_PREFIX = "/wd-journalist"  # To avoid clashes with future user-facing routes
+
+
+@app.route(f'{JOURNALIST_INTERFACE_PREFIX}/submissions', methods=['GET'])
+@journalist_api_key_required
+def journalist_list_submissions_metadata():
+    """
+    Provides a list of submission metadata for authenticated journalists.
+    This does NOT provide the encrypted files themselves.
+    """
+    logger.info(f"Journalist Interface: Request received for submissions metadata by authenticated user.")
+    submission_ids = storage_manager.list_submissions()  # Gets directory names from SUBMISSIONS_DIR
+
+    submissions_metadata = []
     for sub_id_str in submission_ids:
-        data_package = storage_manager.get_submission_data(sub_id_str)
-        hint_to_display = "N/A"
-        if data_package:
+        submission_path = os.path.join(Config.SUBMISSIONS_DIR, sub_id_str)
+        key_hint = "N/A"
+        timestamp_utc_str = "N/A"  # Use string for consistent JSON type
+
+        # Try to get creation/modification time of the submission directory as a proxy for submission time
+        try:
+            # Check if path is a directory before stat-ing
+            if os.path.isdir(submission_path):
+                stat_info = os.stat(submission_path)
+                # Use modification time (st_mtime) as it's more likely to reflect last content change/creation
+                dt_object = datetime.datetime.fromtimestamp(stat_info.st_mtime, tz=datetime.timezone.utc)
+                timestamp_utc_str = dt_object.isoformat(timespec='seconds')
+            else:
+                logger.warning(
+                    f"Path '{submission_path}' for submission_id '{sub_id_str}' is not a directory. Skipping for metadata.")
+                continue  # Skip this item if it's not a directory as expected
+        except FileNotFoundError:
+            logger.warning(f"Submission directory not found for '{sub_id_str}' while getting timestamp. Skipping.")
+            continue
+        except Exception as e_stat:
+            logger.warning(f"Could not get timestamp for submission '{sub_id_str}': {e_stat}")
+
+        # Read the key hint from the hint file within the submission directory
+        hint_file_path = os.path.join(submission_path, storage_manager.RSA_PUBLIC_KEY_HINT_NAME)
+        if os.path.exists(hint_file_path) and os.path.isfile(hint_file_path):
             try:
-                # Correct unpacking for 5 elements
-                _enc_file, _enc_aes_key, _rsa_id, _enc_filename, rsa_hint_from_storage = data_package
-                if rsa_hint_from_storage:
-                    hint_to_display = rsa_hint_from_storage
-            except ValueError as ve:
-                logger.error(f"ValueError unpacking data_package in list_all_submissions for ID '{sub_id_str}': {ve}")
-                # Continue, but this submission might have an issue or old format
-        submissions_with_hints.append({"id": sub_id_str, "key_hint": hint_to_display})
+                with open(hint_file_path, 'r', encoding='utf-8') as hf:
+                    hint_content = hf.read().strip()
+                if hint_content:
+                    key_hint = hint_content
+            except Exception as e_hint:
+                logger.warning(f"Could not read hint file for submission '{sub_id_str}': {e_hint}")
 
-    return jsonify({"submissions": submissions_with_hints})
+        submissions_metadata.append({
+            "id": sub_id_str,
+            "timestamp_utc": timestamp_utc_str,  # Approximate submission time
+            "rsa_key_hint": key_hint,
+            # Add other non-sensitive metadata if available/needed in future
+        })
 
-
-@app.route('/journalist/submission/<submission_id>/package', methods=['GET'])
-@journalist_api_required
-def get_submission_package_details(submission_id):
-    data_package = storage_manager.get_submission_data(submission_id)
-    if not data_package:
-        return jsonify({"error": "Submission not found"}), 404
-
-    # Ensure this unpacking is also for 5 items
+    # Sort by timestamp, newest first (optional but good for UI)
     try:
-        _enc_file, _enc_aes, rsa_public_key_id_on_server, _enc_fname, rsa_key_hint = data_package
-    except ValueError as ve:
-        logger.error(f"ValueError unpacking data_package in /package for submission '{submission_id}': {ve}")
-        return jsonify({"error": "Internal server error: data format issue"}), 500
+        # Ensure robust sorting even if some timestamps are "N/A"
+        submissions_metadata.sort(key=lambda x: x.get("timestamp_utc", "0000-00-00T00:00:00Z"), reverse=True)
+    except Exception as e_sort:
+        logger.warning(f"Could not sort submissions metadata by timestamp: {e_sort}")
+
+    return jsonify({"submissions": submissions_metadata})
+
+
+@app.route(f'{JOURNALIST_INTERFACE_PREFIX}/status', methods=['GET'])
+@journalist_api_key_required
+def journalist_interface_status():
+    logger.info("Journalist Interface: Status endpoint accessed.")
+    # A more accurate count of available keys:
+    num_available_keys_count = key_manager.count_available_public_keys()
 
     return jsonify({
-        "submission_id": submission_id,
-        "rsa_public_key_id_on_server": rsa_public_key_id_on_server,
-        "rsa_public_key_hint": rsa_key_hint,  # Make sure this is being sent
-        "encrypted_file_url": url_for('download_encrypted_component', submission_id=submission_id, component='file',
-                                      _external=True),
-        "encrypted_aes_key_url": url_for('download_encrypted_component', submission_id=submission_id, component='key',
-                                         _external=True),
-        "encrypted_filename_url": url_for('download_encrypted_component', submission_id=submission_id,
-                                          component='filename', _external=True),
+        "status": "ok",
+        "message": "Journalist Interface is operational.",
+        "service_version": "1.1-secure-workflow",  # Example version
+        "available_encryption_keys_count": num_available_keys_count
     })
 
 
-@app.route('/journalist/submission/<submission_id>/<component>', methods=['GET'])
-@journalist_api_required
-def download_encrypted_component(submission_id, component):
-    logger.debug(f"Request to download component '{component}' for submission '{submission_id}'")
-    data_package = storage_manager.get_submission_data(submission_id)  # Returns 5 items now
+# Simple HTML page for the journalist interface (can be expanded)
+@app.route(f'{JOURNALIST_INTERFACE_PREFIX}/', methods=['GET'])
+def journalist_interface_page():
+    # This page would ideally use JavaScript to call the /submissions API endpoint
+    # after the journalist enters their API key.
+    # For simplicity here, it's just a placeholder.
+    # The journalist_gui.py will be the primary way to interact with this API.
+    return render_template('journalist_interface.html',
+                           api_endpoint_url=url_for('journalist_list_submissions_metadata', _external=True),
+                           status_endpoint_url=url_for('journalist_interface_status', _external=True)
+                           )
 
-    if not data_package:
-        logger.warning(
-            f"Submission data not found for ID '{submission_id}' when trying to download component '{component}'.")
-        return jsonify({"error": "Submission not found"}), 404
 
-    # ---- CORRECTED UNPACKING: Expect 5 items ----
+# --- General Health Check ---
+@app.route('/health', methods=['GET'])
+def health_check():
+    # Basic health check, can be expanded (e.g., check DB connection status)
+    db_ok = False
     try:
-        encrypted_file_data, encrypted_aes_key_data, _rsa_id, encrypted_original_filename, _rsa_hint = data_package
-        # We use _rsa_id and _rsa_hint to acknowledge they exist, even if not used in this specific function.
-    except ValueError as ve:
-        logger.error(f"ValueError during unpacking data_package for submission '{submission_id}': {ve}")
-        logger.error(f"Data package received was: {data_package}")  # Log what was actually received
-        return jsonify({"error": "Internal server error: data format mismatch"}), 500
-    # ---- END CORRECTED UNPACKING ----
+        # A light check, e.g., count keys or try a simple query
+        conn = key_manager.get_db_connection()
+        if conn:
+            conn.close()
+            db_ok = True
+    except Exception:
+        db_ok = False  # Could not connect or query
 
-    content_to_send = None
-    download_name = "encrypted_data.dat"  # Default download name
-
-    if component == 'file':
-        content_to_send = encrypted_file_data
-        download_name = "encrypted_file.dat"
-        logger.debug(f"Serving encrypted_file.dat for submission {submission_id}")
-    elif component == 'key':
-        content_to_send = encrypted_aes_key_data
-        download_name = "encrypted_aes_key.dat"
-        logger.debug(f"Serving encrypted_aes_key.dat for submission {submission_id}")
-    elif component == 'filename':
-        content_to_send = encrypted_original_filename
-        download_name = "encrypted_filename.dat"
-        logger.debug(f"Serving encrypted_filename.dat for submission {submission_id}")
-    else:
-        logger.warning(f"Invalid component '{component}' requested for submission {submission_id}")
-        return jsonify({"error": "Invalid component requested"}), 400
-
-    if content_to_send is None:  # Should not happen if component is valid
-        logger.error(
-            f"Content to send is None for component '{component}', submission {submission_id}. This is unexpected.")
-        return jsonify({"error": "Internal server error: component data missing"}), 500
-
-    return Response(
-        content_to_send,
-        mimetype='application/octet-stream',
-        headers={"Content-Disposition": f"attachment;filename={download_name}"}
-    )
-
-
-@app.route('/journalist/admin/add-public-keys', methods=['POST'])
-@journalist_api_required
-def batch_add_public_keys():
-    if not request.is_json:
-        return jsonify({"error": "Invalid request: payload must be JSON"}), 400
-
-    data = request.get_json()
-    public_key_objects = data.get('public_keys')
-
-    if not isinstance(public_key_objects, list) or not public_key_objects:
-        return jsonify({"error": "Invalid payload: 'public_keys' must be a non-empty list of objects"}), 400
-
-    results = []
-    success_count = 0
-    failure_count = 0
-
-    for key_obj in public_key_objects:  # key_obj should be {"pem": "...", "hint": "..."}
-        pem_string = key_obj.get('pem')
-        hint_string_from_payload = key_obj.get('hint')  # This is the hint extracted by the GUI
-
-        # CRITICAL LOGGING: What hint does this endpoint extract from the payload?
-        logger.info(
-            f"APP.PY BATCH_ADD_PUBLIC_KEYS: Processing key. PEM starts: {str(pem_string)[:40]}, HINT from payload: '{hint_string_from_payload}'")
-
-        if not isinstance(pem_string, str) or not pem_string.strip().startswith("-----BEGIN PUBLIC KEY-----"):
-            results.append({"key_preview": str(pem_string)[:30] + "...", "status": "failed",
-                            "reason": "Invalid format or not a public key PEM"})
-            failure_count += 1
-            continue
-
-        # This hint_string_from_payload is passed to key_manager.add_public_key
-        if key_manager.add_public_key(pem_string, identifier_hint=hint_string_from_payload):
-            results.append({"key_preview": str(pem_string)[:30] + "...", "status": "success",
-                            "reason": f"Added to database (Hint: {hint_string_from_payload})"})
-            success_count += 1
-        else:
-            results.append({"key_preview": str(pem_string)[:30] + "...", "status": "failed",
-                            "reason": f"Not added (Hint: {hint_string_from_payload}) - likely duplicate, invalid, or DB error"})
-            failure_count += 1
-
-    logger.info(f"Batch add public keys request: {success_count} succeeded, {failure_count} failed.")
     return jsonify({
-        "message": f"Processed {len(public_key_objects)} keys.",
-        "success_count": success_count,
-        "failure_count": failure_count,
-        "details": results
+        "status": "ok",
+        "service_name": "WhistleDrop Upload & Journalist Interface",
+        "database_status": "accessible" if db_ok else "error"
     }), 200
 
 
 if __name__ == '__main__':
-    app.run(host=Config.SERVER_HOST, port=Config.SERVER_PORT, debug=False, use_reloader=False)
+    logger.warning("Running Flask app directly using `python app.py` (SecureDrop-Workflow Edition).")
+    logger.warning("This mode is for development testing of Uploads & Journalist Interface ONLY.")
+    logger.warning("It does NOT manage Tor hidden services. Use `python utils/tor_manager.py` for full system.")
+
+    ssl_context_to_use = None
+    if os.path.exists(Config.SSL_CERT_PATH) and os.path.exists(Config.SSL_KEY_PATH):
+        ssl_context_to_use = (Config.SSL_CERT_PATH, Config.SSL_KEY_PATH)
+        print(f"INFO: Flask dev server starting with HTTPS on https://{Config.SERVER_HOST}:{Config.FLASK_HTTPS_PORT}")
+    else:
+        print(
+            f"WARNING: SSL certs not found. Flask dev server starting WITHOUT HTTPS on http://{Config.SERVER_HOST}:{Config.FLASK_HTTPS_PORT}")
+        print("         This is INSECURE. Generate SSL certs or use tor_manager.py.")
+
+    app.run(
+        host=Config.SERVER_HOST, port=Config.FLASK_HTTPS_PORT,
+        debug=True, use_reloader=True, ssl_context=ssl_context_to_use
+    )

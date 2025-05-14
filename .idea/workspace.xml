@@ -4,10 +4,25 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="e4858ed9-af9f-4456-821b-72f775f2afc1" name="Changes" comment="Removed more unused files.">
+    <list default="true" id="e4858ed9-af9f-4456-821b-72f775f2afc1" name="Changes" comment="Fixed a major security issue and now using keyring to store users API securely, added keyring in the requirements as well.">
+      <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/journalist_tool/crypto_utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/journalist_tool/crypto_utils.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/journalist_tool/decrypt_tool.py" beforeDir="false" afterPath="$PROJECT_DIR$/journalist_tool/decrypt_tool.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/journalist_tool/gui_config.json" beforeDir="false" afterPath="$PROJECT_DIR$/journalist_tool/gui_config.json" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/journalist_tool/journalist_gui.py" beforeDir="false" afterPath="$PROJECT_DIR$/journalist_tool/journalist_gui.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/requirements.txt" beforeDir="false" afterPath="$PROJECT_DIR$/requirements.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils/add_public_key_to_db.py" beforeDir="false" afterPath="$PROJECT_DIR$/utils/add_public_key_to_db.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils/generate_rsa_keys.py" beforeDir="false" afterPath="$PROJECT_DIR$/utils/generate_rsa_keys.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils/tor_manager.py" beforeDir="false" afterPath="$PROJECT_DIR$/utils/tor_manager.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/whistledrop_server/app.py" beforeDir="false" afterPath="$PROJECT_DIR$/whistledrop_server/app.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/whistledrop_server/config.py" beforeDir="false" afterPath="$PROJECT_DIR$/whistledrop_server/config.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/whistledrop_server/crypto_utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/whistledrop_server/crypto_utils.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/whistledrop_server/key_manager.py" beforeDir="false" afterPath="$PROJECT_DIR$/whistledrop_server/key_manager.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/whistledrop_server/storage_manager.py" beforeDir="false" afterPath="$PROJECT_DIR$/whistledrop_server/storage_manager.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/whistledrop_server/templates/upload.html" beforeDir="false" afterPath="$PROJECT_DIR$/whistledrop_server/templates/upload.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/whistledrop_server/wsgi.py" beforeDir="false" afterPath="$PROJECT_DIR$/whistledrop_server/wsgi.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -123,7 +138,15 @@
       <option name="project" value="LOCAL" />
       <updated>1747001553572</updated>
     </task>
-    <option name="localTasksCounter" value="6" />
+    <task id="LOCAL-00006" summary="Fixed a major security issue and now using keyring to store users API securely, added keyring in the requirements as well.">
+      <option name="closed" value="true" />
+      <created>1747004253227</created>
+      <option name="number" value="00006" />
+      <option name="presentableId" value="LOCAL-00006" />
+      <option name="project" value="LOCAL" />
+      <updated>1747004253227</updated>
+    </task>
+    <option name="localTasksCounter" value="7" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -153,6 +176,7 @@
     <MESSAGE value="Added Upload size limit and more feedback for the Whistleblower upload process." />
     <MESSAGE value="Removed unused file." />
     <MESSAGE value="Removed more unused files." />
-    <option name="LAST_COMMIT_MESSAGE" value="Removed more unused files." />
+    <MESSAGE value="Fixed a major security issue and now using keyring to store users API securely, added keyring in the requirements as well." />
+    <option name="LAST_COMMIT_MESSAGE" value="Fixed a major security issue and now using keyring to store users API securely, added keyring in the requirements as well." />
   </component>
 </project>

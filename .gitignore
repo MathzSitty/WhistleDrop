@@ -18,6 +18,18 @@ journalist_tool/private_keys/*
 !journalist_tool/private_keys/.gitkeep # If you want to keep the dir
 journalist_tool/decrypted_submissions/*
 !journalist_tool/decrypted_submissions/.gitkeep # If you want to keep the dir
+journalist_tool/gui_config.json # User-specific configuration
+journalist_tool/local_encrypted_submissions_import/ # Directory for journalist to place exported submissions
+
+# SSL Certificates (sensitive or generated)
+whistledrop_server/certs/key.pem
+whistledrop_server/certs/cert.pem
+# SFTP specific data is no longer needed
+# whistledrop_server/sftp_data/sftp_host_key
+# whistledrop_server/sftp_data/authorized_keys
+
+# Exported submissions (if admin exports them into the project dir temporarily)
+exported_submissions/
 
 # IDE / OS files
 .vscode/

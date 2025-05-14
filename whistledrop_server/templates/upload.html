@@ -52,13 +52,13 @@
             width: 100%;
             max-width: 550px;
             text-align: center;
-            border-top: 5px solid #D88C4B;
-            position: relative; /* For z-index if needed above side elements, though z-index on body::before/after should handle it */
+            border-top: 5px solid #D88C4B; /* Autumn Orange Accent */
+            position: relative;
             z-index: 1;
         }
 
         h1 {
-            color: #8C5A32;
+            color: #8C5A32; /* Dark Autumn Brown */
             margin-bottom: 15px;
             font-weight: 500;
             font-size: 2em;
@@ -66,7 +66,7 @@
 
         p.subtitle {
             font-size: 1em;
-            color: #6B5A4C;
+            color: #6B5A4C; /* Muted Brown */
             margin-bottom: 30px;
         }
 
@@ -74,29 +74,29 @@
             display: block;
             margin-bottom: 8px;
             font-weight: 500;
-            color: #8C5A32;
+            color: #8C5A32; /* Dark Autumn Brown */
             text-align: left;
         }
 
         input[type="file"] {
             display: block;
-            width: 100%; /* Simpler width */
+            width: 100%;
             padding: 12px;
             margin-bottom: 25px;
-            border: 1px solid #D1C0A8;
+            border: 1px solid #D1C0A8; /* Light Tan Border */
             border-radius: 6px;
-            background-color: #FFFDF9;
+            background-color: #FFFDF9; /* Very Light Off-White */
             font-size: 0.95em;
-            box-sizing: border-box;
+            box-sizing: border-box; /* Ensures padding doesn't expand width */
             transition: border-color 0.3s ease;
         }
         input[type="file"]:focus {
-            border-color: #D88C4B;
+            border-color: #D88C4B; /* Autumn Orange Accent */
             outline: none;
         }
         input[type="file"]::file-selector-button {
-            background-color: #8C5A32;
-            color: #FAF8F1;
+            background-color: #8C5A32; /* Dark Autumn Brown */
+            color: #FAF8F1; /* Warm Off-White Text */
             padding: 8px 15px;
             border: none;
             border-radius: 4px;
@@ -106,11 +106,11 @@
             transition: background-color 0.3s ease;
         }
         input[type="file"]::file-selector-button:hover {
-            background-color: #754C24;
+            background-color: #754C24; /* Darker Brown on Hover */
         }
 
         input[type="submit"] {
-            background-color: #D88C4B;
+            background-color: #D88C4B; /* Autumn Orange Accent */
             color: white;
             padding: 12px 25px;
             border: none;
@@ -122,7 +122,7 @@
             width: 100%;
         }
         input[type="submit"]:hover {
-            background-color: #C37B3A;
+            background-color: #C37B3A; /* Darker Orange on Hover */
             transform: translateY(-1px);
         }
         input[type="submit"]:active {
@@ -135,45 +135,69 @@
             margin-bottom: 20px;
             border-radius: 6px;
             font-size: 0.95em;
-            text-align: left;
+            text-align: left; /* Messages are usually better left-aligned */
         }
         .success {
-            background-color: #E6F2E2; color: #4A6742; border: 1px solid #A8C6A2;
+            background-color: #E6F2E2; /* Light Green */
+            color: #4A6742; /* Dark Green Text */
+            border: 1px solid #A8C6A2; /* Softer Green Border */
         }
         .error {
-            background-color: #F8E5E5; color: #8F5050; border: 1px solid #D8B0B0;
+            background-color: #F8E5E5; /* Light Red */
+            color: #8F5050; /* Dark Red Text */
+            border: 1px solid #D8B0B0; /* Softer Red Border */
         }
 
         .tor-notice {
             font-size: 0.85em;
-            color: #7A6A5D;
+            color: #7A6A5D; /* Muted Brown */
             margin-top: 30px;
             line-height: 1.5;
         }
-        .tor-notice strong { color: #8C5A32; }
+        .tor-notice strong { color: #8C5A32; } /* Dark Autumn Brown */
 
-        .loader-container { display: none; margin-top: 20px; text-align: center; }
-        .loader-text { font-size: 0.9em; color: #8C5A32; margin-bottom: 8px; }
-        .progress-bar-container { width: 100%; background-color: #E0D4C3; border-radius: 4px; overflow: hidden; height: 10px;}
-        .progress-bar { width: 0%; height: 100%; background-color: #D88C4B; border-radius: 4px; transition: width 0.4s ease-out; }
+        .loader-container {
+            display: none;
+            margin-top: 20px;
+            text-align: center;
+        }
+        .loader-text {
+            font-size: 0.9em;
+            color: #8C5A32; /* Dark Autumn Brown */
+            margin-bottom: 8px;
+        }
+        .progress-bar-container {
+            width: 100%;
+            background-color: #E0D4C3; /* Lighter Tan for progress bar background */
+            border-radius: 4px;
+            overflow: hidden;
+            height: 10px;
+        }
+        .progress-bar {
+            width: 0%;
+            height: 100%;
+            background-color: #D88C4B; /* Autumn Orange Accent */
+            border-radius: 4px;
+            transition: width 0.4s ease-out;
+        }
 
         /* Leaf Decorations - Fixed Positioning relative to viewport */
         .leaf-decoration-top-left {
-            position: fixed; /* Changed to fixed */
+            position: fixed;
             top: 20px;
             left: 20px;
-            font-size: 2.5em; /* You might need a specific font that renders this emoji well and consistently */
-            color: #D88C4B;
+            font-size: 2.5em; /* Ensure a font that renders emojis well is used */
+            color: #D88C4B; /* Autumn Orange */
             opacity: 0.6;
             transform: rotate(-25deg);
-            z-index: 0; /* Ensure it's behind the main container if overlap occurs */
+            z-index: 0;
         }
          .leaf-decoration-bottom-right {
-            position: fixed; /* Changed to fixed */
+            position: fixed;
             bottom: 20px;
             right: 20px;
             font-size: 2.5em;
-            color: #8C5A32;
+            color: #8C5A32; /* Dark Autumn Brown */
             opacity: 0.5;
             transform: rotate(20deg);
             z-index: 0;
@@ -181,51 +205,61 @@
 
         /* Popup Styles */
         .popup-overlay {
-            display: none;
+            display: none; /* Hidden by default */
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background-color: rgba(0, 0, 0, 0.5);
-            z-index: 100;
+            background-color: rgba(0, 0, 0, 0.5); /* Semi-transparent background */
+            z-index: 1000; /* Ensure it's on top */
             justify-content: center;
             align-items: center;
         }
 
         .popup-content {
-            background-color: #F3EADA;
+            background-color: #F3EADA; /* Light Beige/Tan, same as container */
             border-radius: 12px;
             box-shadow: 0 5px 20px rgba(0, 0, 0, 0.2);
-            padding: 25px;
+            padding: 25px 30px;
             width: 90%;
-            max-width: 500px;
+            max-width: 450px; /* Slightly smaller max-width for popup */
             text-align: center;
-            border-top: 5px solid #8C5A32;
+            border-top: 5px solid #8C5A32; /* Dark Autumn Brown accent for popup */
             position: relative;
         }
 
         .popup-title {
-            color: #8C5A32;
+            color: #8C5A32; /* Dark Autumn Brown */
+            margin-top: 0;
             margin-bottom: 15px;
             font-weight: 500;
-            font-size: 1.5em;
+            font-size: 1.6em;
         }
 
         .popup-message {
-            margin-bottom: 20px;
-            color: #4E4033;
-            font-size: 1.1em;
+            margin-bottom: 25px;
+            color: #4E4033; /* Dark Brown Text */
+            font-size: 1.05em;
+            line-height: 1.5;
+        }
+        .popup-message strong { /* For Submission ID */
+            color: #D88C4B; /* Autumn Orange */
+            word-break: break-all; /* Ensure long IDs don't break layout */
         }
 
         .popup-icon {
             font-size: 3em;
-            margin-bottom: 15px;
-            color: #4A6742;
+            margin-bottom: 10px;
+            color: #4A6742; /* Success Green */
+        }
+        .popup-icon.error {
+             color: #8F5050; /* Error Red */
         }
 
+
         .popup-button {
-            background-color: #8C5A32;
+            background-color: #8C5A32; /* Dark Autumn Brown */
             color: white;
             padding: 10px 20px;
             border: none;
@@ -237,7 +271,7 @@
         }
 
         .popup-button:hover {
-            background-color: #754C24;
+            background-color: #754C24; /* Darker Brown on Hover */
         }
     </style>
 </head>
@@ -246,18 +280,23 @@
 
     <div class="container">
         <h1>LeafDrop</h1>
-        <p class="subtitle">Your anonymity is protected. Submit your documents securely.</p>
+        <p class="subtitle">Your anonymity is protected. Submit your documents securely via HTTPS.</p>
 
         {% with messages = get_flashed_messages(with_categories=true) %}
           {% if messages %}
             {% for category, message in messages %}
-              <div class="message {{ category }}">{{ message }}</div>
+              {% if category == 'success' %}
+                <!-- Success messages will be handled by the JavaScript popup -->
+              {% else %}
+                <div class="message {{ category }}">{{ message }}</div>
+              {% endif %}
             {% endfor %}
           {% endif %}
         {% endwith %}
 
         <div id="fileErrorMessage" class="message error" style="display: none;"></div>
 
+        <!-- The form action uses url_for, which should generate an HTTPS URL if the server is running HTTPS -->
         <form id="uploadForm" method="POST" enctype="multipart/form-data" action="{{ url_for('upload_file') }}">
             <label for="file">Choose File:</label>
             <input type="file" name="file" id="file" required>
@@ -272,98 +311,148 @@
         </div>
 
         <p class="tor-notice">
-            For maximum security and anonymity, ensure you are accessing this service via the <strong>Tor Browser</strong>.
-            Your IP address is not logged by this service.
+            For maximum security and anonymity, ensure you are accessing this service via the <strong>Tor Browser</strong>
+            over its <strong>HTTPS .onion address</strong>. Your IP address is not logged by this service.
         </p>
     </div>
 
     <div class="leaf-decoration-bottom-right">🍂</div> <!-- Fallen Leaf Emoji -->
 
-    <!-- Success Popup -->
-    <div class="popup-overlay" id="successPopup">
+    <!-- Popup for Success/Error Messages from Server -->
+    <div class="popup-overlay" id="serverMessagePopup">
         <div class="popup-content">
-            <div class="popup-icon">✅</div>
-            <h2 class="popup-title">Upload Successful!</h2>
-            <p class="popup-message" id="successPopupMessage">Your file has been securely uploaded and encrypted.</p>
-            <button class="popup-button" id="successPopupButton">Close</button>
+            <div class="popup-icon" id="popupIcon">✅</div> <!-- Icon changes based on message type -->
+            <h2 class="popup-title" id="popupTitle">Upload Successful!</h2>
+            <p class="popup-message" id="popupMessageText">Your file has been securely uploaded.</p>
+            <button class="popup-button" id="popupCloseButton">Close</button>
         </div>
     </div>
 
     <script>
-        // JavaScript for loader and file size validation
         const uploadForm = document.getElementById('uploadForm');
         const loaderContainer = document.getElementById('loaderContainer');
         const progressBar = document.getElementById('progressBar');
         const loaderText = document.getElementById('loaderText');
         const submitButton = uploadForm.querySelector('input[type="submit"]');
-        const fileErrorMessage = document.getElementById('fileErrorMessage');
-        const successPopup = document.getElementById('successPopup');
-        const successPopupMessage = document.getElementById('successPopupMessage');
-        const successPopupButton = document.getElementById('successPopupButton');
+        const fileInput = document.getElementById('file');
 
-        // Check for success message from flash
+        const clientFileErrorMessage = document.getElementById('fileErrorMessage'); // For client-side validation errors
+
+        const serverMessagePopup = document.getElementById('serverMessagePopup');
+        const popupIcon = document.getElementById('popupIcon');
+        const popupTitle = document.getElementById('popupTitle');
+        const popupMessageText = document.getElementById('popupMessageText');
+        const popupCloseButton = document.getElementById('popupCloseButton');
+
+        // Max file size (e.g., 50MB). Should match server-side Config.MAX_UPLOAD_SIZE_MB
+        // Ideally, this value would be passed from the server or a shared config.
+        const MAX_FILE_SIZE_BYTES = 50 * 1024 * 1024;
+
+        function showServerMessage(type, title, message) {
+            popupTitle.textContent = title;
+            popupMessageText.innerHTML = message;
+
+            if (type === 'success') {
+                popupIcon.textContent = '✅';
+                popupIcon.className = 'popup-icon';
+            } else {
+                popupIcon.textContent = '❌';
+                popupIcon.className = 'popup-icon error';
+            }
+            serverMessagePopup.style.display = 'flex';
+        }
+
         document.addEventListener('DOMContentLoaded', function() {
-            const successMessages = document.querySelectorAll('.message.success');
-            if (successMessages.length > 0) {
-                // Extract the success message text and display in popup
-                const messageText = successMessages[0].textContent;
-                successPopupMessage.textContent = messageText;
-                
-                // Hide the flash message
-                successMessages[0].style.display = 'none';
-                
-                // Show the popup
-                successPopup.style.display = 'flex';
+            const flashedMessages = [];
+            {% with messages = get_flashed_messages(with_categories=true) %}
+              {% for category, message in messages %}
+                flashedMessages.push({ category: "{{ category }}", message: "{{ message|escapejs }}" });
+              {% endfor %}
+            {% endwith %}
+
+            if (flashedMessages.length > 0) {
+                const firstMessage = flashedMessages[0];
+                let title = firstMessage.category === 'success' ? 'Upload Successful!' : 'Upload Error';
+                let displayMessage = firstMessage.message;
+                if (firstMessage.category === 'success' && firstMessage.message.includes("Submission ID:")) {
+                    displayMessage = firstMessage.message.replace(/(Submission ID: )([^,]+)/, '$1<strong>$2</strong>');
+                }
+                showServerMessage(firstMessage.category, title, displayMessage);
             }
         });
 
-        // Close popup when button is clicked
-        successPopupButton.addEventListener('click', function() {
-            successPopup.style.display = 'none';
+        popupCloseButton.addEventListener('click', function() {
+            serverMessagePopup.style.display = 'none';
         });
+        serverMessagePopup.addEventListener('click', function(event) {
+            if (event.target === serverMessagePopup) {
+                serverMessagePopup.style.display = 'none';
+            }
+        });
+
 
         if (uploadForm) {
             uploadForm.addEventListener('submit', function(event) {
-                const fileInput = document.getElementById('file');
-                
-                // File size validation - 50MB limit
                 if (fileInput.files.length > 0) {
                     const fileSize = fileInput.files[0].size;
-                    const maxSize = 50 * 1024 * 1024; // 50 MB in Bytes
-                    
-                    if (fileSize > maxSize) {
-                        event.preventDefault(); // Stop form submission
-                        fileErrorMessage.textContent = 'File is too large. Maximum file size is 50 MB.';
-                        fileErrorMessage.style.display = 'block';
+                    if (fileSize === 0) {
+                        event.preventDefault();
+                        clientFileErrorMessage.textContent = 'The selected file is empty. Please choose a valid file.';
+                        clientFileErrorMessage.style.display = 'block';
                         return false;
-                    } else {
-                        fileErrorMessage.style.display = 'none';
                     }
+                    if (fileSize > MAX_FILE_SIZE_BYTES) {
+                        event.preventDefault();
+                        clientFileErrorMessage.textContent = `File is too large. Maximum file size is ${MAX_FILE_SIZE_BYTES / (1024*1024)} MB.`;
+                        clientFileErrorMessage.style.display = 'block';
+                        return false;
+                    }
+                    clientFileErrorMessage.style.display = 'none';
+                } else {
+                    event.preventDefault();
+                    clientFileErrorMessage.textContent = 'No file selected. Please choose a file to upload.';
+                    clientFileErrorMessage.style.display = 'block';
+                    return false;
                 }
-                
-                if (fileInput.files.length === 0) { return; }
+
                 if(submitButton) { submitButton.disabled = true; submitButton.value = 'Processing...';}
                 loaderContainer.style.display = 'block';
                 progressBar.style.width = '0%';
                 let progress = 0;
                 loaderText.textContent = 'Preparing file...';
-                const interval = setInterval(() => {
+
+                const progressInterval = setInterval(() => {
                     progress += 10;
                     if (progress <= 40) { progressBar.style.width = progress + '%'; }
-                    else if (progress > 40 && progress <= 70) { loaderText.textContent = 'Encrypting data...'; progressBar.style.width = progress + '%';}
-                    else if (progress > 70 && progress < 100) { loaderText.textContent = 'Securing transmission...'; progressBar.style.width = progress + '%';}
-                    if (progress >= 95) { progressBar.style.width = '95%'; loaderText.textContent = 'Finalizing... Please wait.'; }
-                }, 200);
+                    else if (progress > 40 && progress <= 70) {
+                        loaderText.textContent = 'Encrypting data...';
+                        progressBar.style.width = progress + '%';
+                    }
+                    else if (progress > 70 && progress < 100) {
+                        loaderText.textContent = 'Securing transmission...';
+                        progressBar.style.width = progress + '%';
+                    }
+                    if (progress >= 95) {
+                        progressBar.style.width = '95%';
+                        loaderText.textContent = 'Finalizing... Please wait.';
+                    }
+                    if (progress >= 100) {
+                        clearInterval(progressInterval);
+                    }
+                }, 250);
             });
         }
-        
+
         window.addEventListener('pageshow', function(event) {
-            if (submitButton) {
-                const fileInput = document.getElementById('file');
-                if (fileInput) fileInput.value = '';
-                submitButton.disabled = false; submitButton.value = 'Upload Securely';
+            if (event.persisted || (performance && performance.getEntriesByType("navigation")[0].type === "back_forward")) {
+                if (uploadForm) uploadForm.reset();
+                if (submitButton) {
+                    submitButton.disabled = false;
+                    submitButton.value = 'Upload Securely';
+                }
                 if (loaderContainer) loaderContainer.style.display = 'none';
-                if (fileErrorMessage) fileErrorMessage.style.display = 'none';
+                if (clientFileErrorMessage) clientFileErrorMessage.style.display = 'none';
+                if (serverMessagePopup) serverMessagePopup.style.display = 'none';
             }
         });
     </script>

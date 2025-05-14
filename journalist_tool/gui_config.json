@@ -1,6 +1,9 @@
 {
-    "server_url": "http://127.0.0.1:5000",
-    "api_key": "",
+    "journalist_interface_url": "https://yourwhistledroponionaddress.onion/wd-journalist",
+    "journalist_api_key": "YOUR_API_KEY_FOR_JOURNALIST_INTERFACE_HERE",
     "tor_socks_host": "127.0.0.1",
-    "tor_socks_port": 9150
+    "tor_socks_port": 9150,
+    "local_encrypted_submissions_import_dir": "local_encrypted_submissions_import/",
+    "local_decrypted_submissions_output_dir": "decrypted_submissions/",
+    "default_rsa_private_keys_dir": "private_keys/"
 }

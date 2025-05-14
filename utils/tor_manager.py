@@ -2,132 +2,179 @@
 import os
 import sys
 import logging
+import subprocess  # For running Gunicorn
+import time
+from pathlib import Path
 
 # --- Path Adjustment ---
-# This block ensures that Python can find modules in the parent directory (project root)
-# when this script is run directly from the 'utils' subdirectory.
-current_script_path = os.path.abspath(__file__)    # Full path to tor_manager.py
-utils_dir = os.path.dirname(current_script_path)   # Full path to 'utils' directory
-project_root_dir = os.path.dirname(utils_dir)      # Full path to 'whistledrop' directory
-
-# Add the project root to the Python path
-if project_root_dir not in sys.path:
-    sys.path.insert(0, project_root_dir)
+current_script_path = Path(__file__).resolve()
+utils_dir = current_script_path.parent
+project_root_dir = utils_dir.parent
+if str(project_root_dir) not in sys.path:
+    sys.path.insert(0, str(project_root_dir))
 # --- End Path Adjustment ---
 
-# Now, these imports should work because 'whistledrop' (project_root_dir) is in sys.path
-from stem import Signal # stem is a third-party library, should be found via venv
+from stem import Signal
 from stem.control import Controller
 from whistledrop_server.config import Config
-from whistledrop_server.app import app as flask_app
-# Ensure key_manager is initialized if app doesn't do it early enough for some reason,
-# though app import should trigger it.
-from whistledrop_server import key_manager # key_manager.initialize_key_database() runs on its import
+from whistledrop_server import key_manager  # Ensures DB init
 
-
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logging.basicConfig(level=logging.INFO,
+                    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+                    handlers=[logging.StreamHandler(sys.stdout)])
 logger = logging.getLogger("tor_manager")
 
-# ... (Rest of the tor_manager.py script remains the same) ...
-def start_whistledrop_with_tor_hidden_service():
-    # ... (Funktionsinhalt wie zuvor) ...
-    # Example from a previous correct version:
-    flask_host = Config.SERVER_HOST
-    flask_port = Config.SERVER_PORT
-    control_port = Config.TOR_CONTROL_PORT
-    control_password = Config.TOR_CONTROL_PASSWORD
 
-    logger.info("Attempting to connect to Tor control port...")
+def start_whistledrop_web_service_with_tor():
+    """
+    Manages the startup of WhistleDrop's web services (Flask app via Gunicorn):
+    1. Initializes the key database.
+    2. Starts Gunicorn for the Flask app (HTTPS for uploads & journalist interface).
+    3. Connects to Tor ControlPort and creates an ephemeral hidden service for HTTPS.
+       SFTP is no longer part of this managed startup.
+    """
+    logger.info("WhistleDrop Tor Manager starting web services (SecureDrop-Workflow Edition)...")
+
     try:
-        with Controller.from_port(port=control_port) as controller:
-            # ... (authentication logic) ...
-            if control_password:
-                try:
-                    controller.authenticate(password=control_password)
-                    logger.info("Authenticated to Tor control port using password.")
-                except Exception as auth_exc:
-                    logger.error(f"Password authentication to Tor control port failed: {auth_exc}")
-                    # ... (error details) ...
-                    return
-            else:
-                try:
-                    controller.authenticate()
-                    logger.info("Authenticated to Tor control port (likely cookie or no auth).")
-                except Exception as auth_exc:
-                    logger.warning(f"Cookie/No-auth authentication to Tor control port failed: {auth_exc}")
-                    # ... (error details) ...
-                    # For create_ephemeral_hidden_service, authentication is usually required.
-                    # If it fails here, the create_ephemeral_hidden_service call will likely also fail.
+        key_manager.initialize_key_database()
+    except Exception as e_db_init:
+        logger.critical(f"Failed to initialize key database: {e_db_init}. Aborting.", exc_info=True)
+        return
 
-            logger.info(f"Creating ephemeral hidden service for {flask_host}:{flask_port}...")
-            response = controller.create_ephemeral_hidden_service(
-                {80: f"{flask_host}:{flask_port}"},
-                await_publication=True
-            )
+    if not (Path(Config.SSL_CERT_PATH).exists() and Path(Config.SSL_KEY_PATH).exists()):
+        logger.error(f"SSL certificate ('{Config.SSL_CERT_PATH}') or key ('{Config.SSL_KEY_PATH}') not found.")
+        logger.error("Cannot start HTTPS service. Please generate them as per README.")
+        print("Error: SSL certificate/key missing. WhistleDrop cannot start securely. Check logs. Exiting.")
+        return
 
-            if not response.service_id:
-                logger.error("Failed to create hidden service. Tor logs might have more details.")
-                return
+    # Start Gunicorn for Flask app (HTTPS for uploads & journalist interface)
+    gunicorn_command = [
+        "gunicorn",
+        "--bind", f"{Config.SERVER_HOST}:{Config.FLASK_HTTPS_PORT}",
+        "--workers", "2",  # Adjust number of workers as needed
+        "--certfile", str(Path(Config.SSL_CERT_PATH).resolve()),
+        "--keyfile", str(Path(Config.SSL_KEY_PATH).resolve()),
+        "whistledrop_server.wsgi:app"  # Points to the Flask app instance
+    ]
+    logger.info(f"Attempting to start Gunicorn with command: {' '.join(gunicorn_command)}")
+    gunicorn_process = None
+    try:
+        gunicorn_process = subprocess.Popen(gunicorn_command, cwd=project_root_dir)
+        logger.info(f"Gunicorn process initiated with PID: {gunicorn_process.pid}. Waiting for startup...")
+        time.sleep(3)  # Give Gunicorn a moment to start up and bind.
 
-            onion_address = f"{response.service_id}.onion"
-            logger.info("--------------------------------------------------------------------")
-            logger.info(f"WhistleDrop Hidden Service ONION ADDRESS: {onion_address}")
-            logger.info("This service is EPHEMERAL and will be removed when this script exits.")
-            logger.info("--------------------------------------------------------------------")
-            print(f"\nWhistleDrop accessible at: {onion_address}\n(Ensure Tor Browser is running)")
-            print(f"Also locally at http://{flask_host}:{flask_port} (for direct testing if needed)\n")
+        if gunicorn_process.poll() is not None:  # Check if Gunicorn exited prematurely
+            logger.error(f"Gunicorn failed to start or exited prematurely. Exit code: {gunicorn_process.returncode}")
+            print("Error: Gunicorn (web server) failed to start. Check logs above. Aborting.")
+            return
+        logger.info("Gunicorn (web server) appears to be running.")
 
-            logger.info(f"Starting WhistleDrop server on {flask_host}:{flask_port}...")
+    except FileNotFoundError:
+        logger.error("Gunicorn command not found. Is Gunicorn installed and in your PATH?", exc_info=True)
+        print("Error: Gunicorn not found. Please install Gunicorn (`pip install gunicorn`). Aborting.")
+        return
+    except Exception as e_gunicorn:
+        logger.error(f"Failed to start Gunicorn: {e_gunicorn}", exc_info=True)
+        print(f"Error: Failed to start Gunicorn (web server): {e_gunicorn}. Check logs. Aborting.")
+        return
+
+    # Connect to Tor ControlPort and set up Hidden Service
+    logger.info(f"Attempting to connect to Tor control port {Config.TOR_CONTROL_PORT}...")
+    tor_controller = None
+    hidden_service_response = None
+    try:
+        tor_controller = Controller.from_port(port=Config.TOR_CONTROL_PORT)
+
+        if Config.TOR_CONTROL_PASSWORD:
             try:
-                # Ensure key_manager's DB initialization has run; importing app should do this
-                # as app imports modules which import key_manager which calls initialize_key_database()
-                if not os.path.exists(Config.KEY_DB_PATH):
-                    logger.warning(f"Key database at {Config.KEY_DB_PATH} not found. Attempting to initialize...")
-                    key_manager.initialize_key_database()
+                tor_controller.authenticate(password=Config.TOR_CONTROL_PASSWORD)
+                logger.info("Authenticated to Tor control port using password.")
+            except Exception as auth_exc:
+                logger.error(f"Password authentication to Tor control port failed: {auth_exc}", exc_info=True)
+                if gunicorn_process: gunicorn_process.terminate()
+                return
+        else:
+            try:
+                tor_controller.authenticate()
+                logger.info("Authenticated to Tor control port (cookie or no auth configured).")
+            except Exception as auth_exc:
+                logger.warning(f"Cookie/No-auth authentication to Tor control port failed: {auth_exc}")
 
-                flask_app.run(host=flask_host, port=flask_port, debug=False, use_reloader=False)
-            except KeyboardInterrupt:
-                logger.info("Flask app stopped by user (KeyboardInterrupt).")
-            except Exception as flask_e:
-                logger.error(f"Flask app crashed: {flask_e}", exc_info=True)
-            finally:
-                logger.info("Flask app has shut down.")
-                logger.info("Tor manager script finished.")
-    # ... (rest of exception handling for Tor connection) ...
+        # Only HTTPS port is needed for the hidden service in this workflow
+        hidden_service_ports_map = {
+            443: f"{Config.SERVER_HOST}:{Config.FLASK_HTTPS_PORT}"
+        }
+
+        logger.info(
+            f"Creating ephemeral Tor hidden service (HTTPS only) with port mappings: {hidden_service_ports_map}...")
+        hidden_service_response = tor_controller.create_ephemeral_hidden_service(
+            ports=hidden_service_ports_map,
+            await_publication=True,
+            key_type='ED25519-V3'
+        )
+
+        if not hidden_service_response or not hidden_service_response.service_id:
+            logger.error("Failed to create Tor hidden service. Response from Tor was invalid or service_id missing.")
+            if gunicorn_process: gunicorn_process.terminate()
+            return
+
+        onion_address = f"{hidden_service_response.service_id}.onion"
+        logger.info("--------------------------------------------------------------------")
+        logger.info(f"WhistleDrop Hidden Service successfully created!")
+        logger.info(f"ONION ADDRESS (HTTPS): https://{onion_address}")
+        logger.info(f"  (Used for Whistleblower Uploads AND Journalist Interface Metadaten-Abruf)")
+        logger.info("This hidden service is EPHEMERAL and will be removed when this script exits.")
+        logger.info("--------------------------------------------------------------------")
+        print(f"\nWhistleDrop is now ACCESSIBLE via Tor Hidden Service:")
+        print(f"  ONION ADDRESS (HTTPS): https://{onion_address}")
+        print(f"    (For Whistleblower Uploads and Journalist Interface)")
+        print(f"\nLocal Gunicorn (HTTPS) running at: https://{Config.SERVER_HOST}:{Config.FLASK_HTTPS_PORT}")
+        print("\nPress Ctrl+C to stop all services and remove the ephemeral hidden service.")
+
+        while gunicorn_process.poll() is None:
+            time.sleep(1)
+
+        logger.info(f"Gunicorn process ended with exit code: {gunicorn_process.returncode}. Shutting down.")
+
     except ConnectionRefusedError:
-        logger.error(f"Connection to Tor control port {control_port} refused.")
-        logger.error("Ensure Tor is running and ControlPort is enabled and listening on the correct address/port.")
-    except Exception as e:
-        logger.error(f"An error occurred in the Tor manager: {e}", exc_info=True)
-        # ... (troubleshooting tips) ...
-        print("\nFailed to start with Tor hidden service. Check logs and Tor configuration.")
+        logger.error(f"Connection to Tor control port {Config.TOR_CONTROL_PORT} refused.")
+        logger.error("Ensure Tor is running and its ControlPort is enabled.")
+    except Exception as e_tor_setup:
+        logger.error(f"An error occurred during Tor hidden service setup: {e_tor_setup}", exc_info=True)
+    finally:
+        logger.info("Initiating shutdown of WhistleDrop services...")
+        if gunicorn_process and gunicorn_process.poll() is None:
+            logger.info("Terminating Gunicorn process...")
+            gunicorn_process.terminate()
+            try:
+                gunicorn_process.wait(timeout=10)
+                logger.info("Gunicorn process terminated.")
+            except subprocess.TimeoutExpired:
+                logger.warning("Gunicorn process did not terminate gracefully. Killing.")
+                gunicorn_process.kill()
+
+        if tor_controller and tor_controller.is_connected() and hidden_service_response and hidden_service_response.service_id:
+            try:
+                logger.info(f"Removing ephemeral hidden service: {hidden_service_response.service_id}")
+                tor_controller.remove_ephemeral_hidden_service(hidden_service_response.service_id)
+                logger.info("Ephemeral hidden service removed.")
+            except Exception as e_remove_hs:
+                logger.error(f"Failed to remove ephemeral hidden service: {e_remove_hs}", exc_info=True)
+
+        if tor_controller and tor_controller.is_connected():
+            tor_controller.close()
+            logger.info("Tor controller connection closed.")
+
+        logger.info("WhistleDrop Tor manager script finished.")
 
 
 if __name__ == "__main__":
-    # API Key Check (moved from config.py to be more visible when running this script)
-    if not Config.JOURNALIST_API_KEY or Config.JOURNALIST_API_KEY.startswith("dev-journalist-api-key-CHANGE-ME") or len(
-            Config.JOURNALIST_API_KEY) < 32:
-        print("=" * 70)
-        print("WARNUNG: WHISTLEDROP_JOURNALIST_API_KEY ist nicht sicher konfiguriert.")
-        if not Config.JOURNALIST_API_KEY:
-            print("         Die Umgebungsvariable ist NICHT gesetzt.")
-        else:
-            print(f"         Der aktuelle Wert ist: {Config.JOURNALIST_API_KEY[:10]}...")
-        print("         Für den produktiven Betrieb oder persistente Nutzung setzen Sie bitte")
-        print("         die Umgebungsvariable 'WHISTLEDROP_JOURNALIST_API_KEY' auf einen langen,")
-        print("         zufälligen und geheimen Wert.")
-        print("         Ein temporärer API-Key wird für diese Server-Sitzung verwendet, falls")
-        print("         die Konfiguration in config.py einen Fallback-Mechanismus hat.")
-        # Note: The current config.py generates one if not set, but it will be different each time.
-        print("=" * 70)
-        # Allow a moment for the user to see the warning
-        # time.sleep(3)
+    print("--- WhistleDrop Secure Platform - Tor Manager (SecureDrop-Workflow Edition) ---")
+    print("This script starts the WhistleDrop web service (HTTPS for Uploads & Journalist Interface)")
+    print("and configures it as an ephemeral Tor Hidden Service.")
+    print("\nPrerequisites:")
+    print(f"  - Tor service running with ControlPort enabled (e.g., 127.0.0.1:{Config.TOR_CONTROL_PORT}).")
+    print(f"  - SSL certificate/key in: {Path(Config.CERT_DIR).resolve()}")
+    print("\nPress Ctrl+C to stop services and remove the hidden service.\n")
 
-    print("Starting WhistleDrop with Tor Hidden Service Management...")
-    # ... (rest of the print statements) ...
-    print("IMPORTANT: Ensure Tor is installed and running with its control port enabled.")
-    print(f"           Default control port used by this script: {Config.TOR_CONTROL_PORT}")
-    print("           This script will attempt to create an EPHEMERAL hidden service.")
-    print("           Press Ctrl+C to stop the server and remove the hidden service.\n")
-
-    start_whistledrop_with_tor_hidden_service()
+    start_whistledrop_web_service_with_tor()
