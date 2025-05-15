@@ -5,116 +5,34 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>WhistleDrop - Journalist Interface</title>
     <style>
-        body {
-            font-family: 'Roboto', sans-serif;
-            background-color: #FAF8F1;
-            color: #4E4033;
-            margin: 0;
-            padding: 20px;
-            line-height: 1.6;
-        }
-        .container {
-            background-color: #F3EADA;
-            padding: 20px 30px;
-            border-radius: 12px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
-            max-width: 900px;
-            margin: 20px auto;
-        }
-        h1 {
-            color: #8C5A32;
-            text-align: center;
-            border-bottom: 2px solid #D1C0A8;
-            padding-bottom: 10px;
-            margin-bottom: 20px;
-        }
-        .controls, .status-section {
-            margin-bottom: 20px;
-            padding: 15px;
-            background-color: #FFFDF9;
-            border: 1px solid #D1C0A8;
-            border-radius: 8px;
-        }
-        label {
-            display: block;
-            margin-bottom: 5px;
-            font-weight: 500;
-            color: #8C5A32;
-        }
-        input[type="text"], input[type="password"] {
-            width: calc(100% - 22px);
-            padding: 10px;
-            margin-bottom: 10px;
-            border: 1px solid #D1C0A8;
-            border-radius: 4px;
-            font-size: 1em;
-        }
-        button {
-            background-color: #8C5A32;
-            color: white;
-            padding: 10px 15px;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 1em;
-            transition: background-color 0.3s ease;
-        }
-        button:hover {
-            background-color: #754C24;
-        }
-        button:disabled {
-            background-color: #BFBFBF;
-            cursor: not-allowed;
-        }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 20px;
-        }
-        th, td {
-            border: 1px solid #D1C0A8;
-            padding: 10px;
-            text-align: left;
-        }
-        th {
-            background-color: #E0D4C3;
-            color: #5D4037;
-        }
-        tr:nth-child(even) {
-            background-color: #FAF8F1;
-        }
-        .error-message {
-            color: #D8000C;
-            background-color: #FFD2D2;
-            border: 1px solid #D8000C;
-            padding: 10px;
-            border-radius: 4px;
-            margin-top: 10px;
-        }
-        .status-ok { color: green; }
-        .status-error { color: red; }
-        .loading {
-            text-align: center;
-            padding: 10px;
-            font-style: italic;
-        }
-        .api-key-info {
-            font-size: 0.9em;
-            color: #6B5A4C;
-            margin-top: 5px;
-            padding-left: 5px;
-        }
+        body { font-family: 'Roboto', sans-serif; background-color: #FAF8F1; color: #4E4033; margin: 0; padding: 20px; line-height: 1.6; }
+        .container { background-color: #F3EADA; padding: 20px 30px; border-radius: 12px; box-shadow: 0 5px 15px rgba(0,0,0,0.08); max-width: 900px; margin: 20px auto; }
+        h1 { color: #8C5A32; text-align: center; border-bottom: 2px solid #D1C0A8; padding-bottom: 10px; margin-bottom: 20px; }
+        .controls, .status-section { margin-bottom: 20px; padding: 15px; background-color: #FFFDF9; border: 1px solid #D1C0A8; border-radius: 8px; }
+        /* API Key input is removed, Basic Auth is handled by browser */
+        button { background-color: #8C5A32; color: white; padding: 10px 15px; border: none; border-radius: 4px; cursor: pointer; font-size: 1em; transition: background-color 0.3s ease; }
+        button:hover { background-color: #754C24; }
+        button:disabled { background-color: #BFBFBF; cursor: not-allowed; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid #D1C0A8; padding: 10px; text-align: left; }
+        th { background-color: #E0D4C3; color: #5D4037; }
+        tr:nth-child(even) { background-color: #FAF8F1; }
+        .error-message { color: #D8000C; background-color: #FFD2D2; border: 1px solid #D8000C; padding: 10px; border-radius: 4px; margin-top: 10px; }
+        .status-ok { color: green; } .status-error { color: red; }
+        .loading { text-align: center; padding: 10px; font-style: italic; }
+        .auth-info { font-size: 0.9em; color: #6B5A4C; margin-bottom: 15px; padding: 10px; background-color: #FFFDF9; border: 1px solid #D1C0A8; border-radius: 4px;}
     </style>
 </head>
 <body>
     <div class="container">
         <h1>WhistleDrop - Journalist Submission Monitor</h1>
 
-        <div class="controls">
-            <label for="apiKey">API Key:</label>
-            <input type="password" id="apiKey" placeholder="Enter your API Key">
-            <p class="api-key-info">The API Key is provided by your server administrator. It is used to authenticate your access to this interface.</p>
+        <div class="auth-info">
+            Access to this interface requires authentication. Your browser will prompt you for a username and password.
+            These credentials are provided by your server administrator.
+        </div>
 
+        <div class="controls">
             <button id="fetchSubmissionsBtn">Fetch Submissions Metadata</button>
             <button id="fetchStatusBtn" style="margin-left: 10px;">Check Server Status</button>
         </div>
@@ -135,17 +53,14 @@
                     <th>RSA Key Hint</th>
                 </tr>
             </thead>
-            <tbody id="submissionsTableBody">
-                <!-- Submissions will be populated here by JavaScript -->
-            </tbody>
+            <tbody id="submissionsTableBody"></tbody>
         </table>
         <p style="text-align:center; font-size:0.9em; color: #6B5A4C; margin-top:20px;">
-            This interface shows metadata about new submissions. The actual encrypted files must be exported by a server administrator and provided to you securely (e.g., via USB stick) for local decryption on your Secure Viewing Station (SVS).
+            This interface shows metadata. Encrypted files are exported by an admin for local decryption on your SVS.
         </p>
     </div>
 
     <script>
-        const apiKeyInput = document.getElementById('apiKey');
         const fetchSubmissionsBtn = document.getElementById('fetchSubmissionsBtn');
         const fetchStatusBtn = document.getElementById('fetchStatusBtn');
         const submissionsTableBody = document.getElementById('submissionsTableBody');
@@ -154,126 +69,78 @@
         const statusSection = document.getElementById('statusSection');
         const statusOutput = document.getElementById('statusOutput');
 
-        const submissionsApiEndpoint = "{{ api_endpoint_url or '/wd-journalist/submissions' }}";
-        const statusApiEndpoint = "{{ status_endpoint_url or '/wd-journalist/status' }}";
+        const submissionsApiEndpoint = "{{ api_endpoint_url_submissions or '/wd-journalist/submissions' }}";
+        const statusApiEndpoint = "{{ api_endpoint_url_status or '/wd-journalist/status' }}";
 
-        function displayError(message) {
-            errorMessageDiv.textContent = message;
-            errorMessageDiv.style.display = 'block';
+        function displayError(message) { /* ... (same as previous version) ... */
+            errorMessageDiv.textContent = message; errorMessageDiv.style.display = 'block';
             loadingMessageDiv.style.display = 'none';
         }
-
-        function clearMessages() {
-            errorMessageDiv.style.display = 'none';
-            errorMessageDiv.textContent = '';
+        function clearMessages() { /* ... (same as previous version) ... */
+            errorMessageDiv.style.display = 'none'; errorMessageDiv.textContent = '';
             loadingMessageDiv.style.display = 'none';
         }
-
-        function setLoading(isLoading) {
-            if (isLoading) {
-                loadingMessageDiv.style.display = 'block';
-                fetchSubmissionsBtn.disabled = true;
-                fetchStatusBtn.disabled = true;
-            } else {
-                loadingMessageDiv.style.display = 'none';
-                fetchSubmissionsBtn.disabled = false;
-                fetchStatusBtn.disabled = false;
-            }
+        function setLoading(isLoading) { /* ... (same as previous version) ... */
+            loadingMessageDiv.style.display = isLoading ? 'block' : 'none';
+            fetchSubmissionsBtn.disabled = isLoading; fetchStatusBtn.disabled = isLoading;
         }
 
         async function fetchData(endpoint) {
             clearMessages();
-            const apiKey = apiKeyInput.value.trim();
-            if (!apiKey) {
-                displayError('API Key is required.');
-                return null;
-            }
-
             setLoading(true);
             try {
+                // For Basic Auth, the browser handles the initial prompt if server sends 401 WWW-Authenticate.
+                // Subsequent requests from the same browser session might automatically include the Authorization header.
+                // No explicit API key handling needed in JS for Basic Auth.
                 const response = await fetch(endpoint, {
                     method: 'GET',
-                    headers: {
-                        'Authorization': `Bearer ${apiKey}`,
-                        'Accept': 'application/json'
-                    }
+                    headers: { 'Accept': 'application/json' } // No Authorization header here, browser adds it after prompt
                 });
 
+                if (response.status === 401) { // Unauthorized
+                    displayError('Authentication failed. Please check your username and password. You may need to refresh the page or clear browser cache for this site to retry.');
+                    return null;
+                }
                 if (!response.ok) {
                     let errorMsg = `Error: ${response.status} ${response.statusText}`;
-                    try {
-                        const errorData = await response.json();
-                        errorMsg += ` - ${errorData.error || 'Unknown server error'}`;
-                    } catch (e) { /* Ignore if error response is not JSON */ }
-                    displayError(errorMsg);
-                    return null;
+                    try { const errorData = await response.json(); errorMsg += ` - ${errorData.error || 'Unknown server error'}`; } catch (e) {}
+                    displayError(errorMsg); return null;
                 }
                 return await response.json();
             } catch (error) {
                 console.error('Fetch error:', error);
-                displayError(`Network or fetch error: ${error.message}. Ensure you are accessing via Tor and the server is reachable.`);
+                displayError(`Network or fetch error: ${error.message}. Ensure Tor access and server reachability.`);
                 return null;
-            } finally {
-                setLoading(false);
-            }
+            } finally { setLoading(false); }
         }
 
-        fetchSubmissionsBtn.addEventListener('click', async () => {
-            submissionsTableBody.innerHTML = '';
-            statusSection.style.display = 'none';
-
+        fetchSubmissionsBtn.addEventListener('click', async () => { /* ... (same as previous, but no API key logic) ... */
+            submissionsTableBody.innerHTML = ''; statusSection.style.display = 'none';
             const data = await fetchData(submissionsApiEndpoint);
             if (data && data.submissions) {
                 if (data.submissions.length === 0) {
-                    const row = submissionsTableBody.insertRow();
-                    const cell = row.insertCell();
-                    cell.colSpan = 3;
-                    cell.textContent = 'No submissions found.';
-                    cell.style.textAlign = 'center';
+                    const r = submissionsTableBody.insertRow(); const c = r.insertCell();
+                    c.colSpan = 3; c.textContent = 'No submissions found.'; c.style.textAlign = 'center';
                 } else {
-                    data.submissions.forEach(submission => {
-                        const row = submissionsTableBody.insertRow();
-                        row.insertCell().textContent = submission.id || 'N/A';
-                        row.insertCell().textContent = submission.timestamp_utc || 'N/A';
-                        row.insertCell().textContent = submission.rsa_key_hint || 'N/A';
-                    });
+                    data.submissions.forEach(s => { const r = submissionsTableBody.insertRow();
+                        r.insertCell().textContent = s.id || 'N/A';
+                        r.insertCell().textContent = s.timestamp_utc || 'N/A';
+                        r.insertCell().textContent = s.rsa_key_hint || 'N/A'; });
                 }
-            } else if (data) {
-                displayError('Received an unexpected response format from the server.');
-            }
+            } else if (data) { displayError('Unexpected response format from server.'); }
         });
 
-        fetchStatusBtn.addEventListener('click', async () => {
-            submissionsTableBody.innerHTML = '';
-            statusSection.style.display = 'block';
-            statusOutput.textContent = 'Fetching status...';
-
+        fetchStatusBtn.addEventListener('click', async () => { /* ... (same as previous, but no API key logic) ... */
+            submissionsTableBody.innerHTML = ''; statusSection.style.display = 'block'; statusOutput.textContent = 'Fetching...';
             const data = await fetchData(statusApiEndpoint);
             if (data) {
-                let statusText = `Status: <span class="${data.status === 'ok' ? 'status-ok' : 'status-error'}">${data.status || 'Unknown'}</span>\n`;
-                statusText += `Message: ${data.message || 'N/A'}\n`;
-                statusText += `Service Version: ${data.service_version || 'N/A'}\n`;
-                if (data.hasOwnProperty('available_encryption_keys_count')) {
-                     statusText += `Available Encryption Keys on Server: ${data.available_encryption_keys_count}\n`;
-                }
-                if (data.hasOwnProperty('database_status')) {
-                    statusText += `Database Status: <span class="${data.database_status === 'accessible' ? 'status-ok' : 'status-error'}">${data.database_status}</span>\n`;
-                }
-                statusOutput.innerHTML = statusText;
-            } else {
-                statusOutput.textContent = 'Failed to fetch server status.';
-            }
+                let sT = `Status: <span class="${data.status==='ok'?'status-ok':'status-error'}">${data.status||'Unknown'}</span>\n`;
+                sT += `Message: ${data.message||'N/A'}\n`; sT += `Version: ${data.service_version||'N/A'}\n`;
+                if(data.hasOwnProperty('available_encryption_keys_count')) sT += `Available Keys: ${data.available_encryption_keys_count}\n`;
+                if(data.hasOwnProperty('database_status')) sT += `DB Status: <span class="${data.database_status==='accessible'?'status-ok':'status-error'}">${data.database_status}</span>\n`;
+                statusOutput.innerHTML = sT;
+            } else { statusOutput.textContent = 'Failed to fetch server status.';}
         });
-
-        const storedApiKey = localStorage.getItem('whistledropJournalistApiKey');
-        if (storedApiKey) {
-            apiKeyInput.value = storedApiKey;
-        }
-
-        apiKeyInput.addEventListener('input', () => {
-            localStorage.setItem('whistledropJournalistApiKey', apiKeyInput.value.trim());
-        });
-
     </script>
 </body>
 </html>

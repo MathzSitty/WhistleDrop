@@ -2,29 +2,27 @@
 import logging
 import sqlite3
 import os
-from .config import Config  # For KEY_DB_PATH
+from werkzeug.security import generate_password_hash, check_password_hash
+from .config import Config
 
 logger = logging.getLogger(__name__)
 
 
-def get_db_connection() -> sqlite3.Connection:
-    """Establishes a connection to the SQLite database."""
-    os.makedirs(os.path.dirname(Config.KEY_DB_PATH), exist_ok=True)
-    conn = sqlite3.connect(Config.KEY_DB_PATH, timeout=10)
-    conn.row_factory = sqlite3.Row
-    try:
-        conn.execute("PRAGMA journal_mode=WAL;")
-    except sqlite3.Error as e:
-        logger.warning(f"Could not set WAL mode for key_store.db: {e}. Using default.")
+def get_db_connection():
+    conn = sqlite3.connect(Config.KEY_DB_PATH)
+    conn.row_factory = sqlite3.Row # Allows accessing columns by name
     return conn
 
-
 def initialize_key_database():
-    """Initializes the RSA public key database and table if they don't exist."""
-    conn = None
+    """
+    Initializes or updates the database schema for both RSA public keys
+    and journalist accounts.
+    """
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
+
+        # --- RSA Public Keys Table ---
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS rsa_public_keys (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -35,101 +33,156 @@ def initialize_key_database():
                 used_at TIMESTAMP NULL
             )
         """)
+        # Add 'key_identifier_hint' column if it doesn't exist (for backward compatibility)
+        try:
+            cursor.execute("ALTER TABLE rsa_public_keys ADD COLUMN key_identifier_hint TEXT")
+            logger.info("Added 'key_identifier_hint' column to rsa_public_keys table.")
+        except sqlite3.OperationalError as e:
+            if "duplicate column name" in str(e).lower():
+                pass  # Column already exists
+            else:
+                logger.error(f"SQLite error checking/adding hint column: {e}")
+                # raise # Re-raise if it's a critical schema issue not related to duplicate column
 
-        cursor.execute("PRAGMA table_info(rsa_public_keys)")
-        columns = [column['name'] for column in cursor.fetchall()]
-        if 'key_identifier_hint' not in columns:
-            try:
-                cursor.execute("ALTER TABLE rsa_public_keys ADD COLUMN key_identifier_hint TEXT")
-                conn.commit()
-                logger.info("Added 'key_identifier_hint' column to rsa_public_keys table.")
-            except sqlite3.OperationalError as e:
-                if "duplicate column name" in str(e).lower():
-                    logger.info("'key_identifier_hint' column already exists.")
-                else:
-                    logger.error(f"Failed to add 'key_identifier_hint' column: {e}", exc_info=True)
-                    raise
-
+        # --- Journalists Table ---
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS journalists (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                username TEXT NOT NULL UNIQUE,
+                password_hash TEXT NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
         conn.commit()
-        logger.info("RSA public key database initialized/verified successfully.")
+        logger.info("Key and Journalist database initialized/updated successfully.")
     except sqlite3.Error as e:
-        logger.error(f"SQLite DB error during initialization of rsa_public_keys: {e}", exc_info=True)
+        logger.error(f"Database error during initialization: {e}")
     finally:
-        if conn:
-            conn.close()
+        if conn: conn.close()
 
+# --- Journalist Account Management ---
 
-def add_public_key(key_pem_str: str, identifier_hint: str | None = None) -> bool:
-    """Adds a new RSA public key PEM string and its identifier hint to the database."""
-    if not key_pem_str.strip().startswith("-----BEGIN PUBLIC KEY-----"):
-        logger.error("Invalid public key format: PEM missing header.")
+def add_journalist(username: str, password: str) -> bool:
+    """Adds a new journalist to the database with a hashed password."""
+    if not username or not password:
+        logger.error("Username and password cannot be empty.")
         return False
 
-    conn = None
+    password_hash = generate_password_hash(password)
+    conn = get_db_connection()
     try:
-        conn = get_db_connection()
         cursor = conn.cursor()
-
-        if identifier_hint and len(identifier_hint) > 255:
-            identifier_hint = identifier_hint[:255]
-            logger.warning(f"Identifier hint truncated to 255 chars.")
-
-        logger.info(f"Attempting to add public key. Hint: '{identifier_hint}', PEM starts: {key_pem_str[:40]}...")
         cursor.execute(
-            "INSERT INTO rsa_public_keys (key_pem, key_identifier_hint, is_used) VALUES (?, ?, 0)",
+            "INSERT INTO journalists (username, password_hash) VALUES (?, ?)",
+            (username, password_hash)
+        )
+        conn.commit()
+        logger.info(f"Journalist account '{username}' created successfully. DB Row ID: {cursor.lastrowid}")
+        return True
+    except sqlite3.IntegrityError:
+        logger.warning(f"Failed to add journalist '{username}': Username likely already exists.")
+        return False
+    except sqlite3.Error as e:
+        logger.error(f"Database error adding journalist '{username}': {e}")
+        return False
+    finally:
+        if conn: conn.close()
+
+def get_journalist_by_username(username: str) -> dict | None:
+    """Retrieves a journalist by username. Returns a dict or None."""
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute("SELECT id, username, password_hash FROM journalists WHERE username = ?", (username,))
+        journalist_row = cursor.fetchone()
+        if journalist_row:
+            return dict(journalist_row)
+        return None
+    except sqlite3.Error as e:
+        logger.error(f"Database error retrieving journalist '{username}': {e}")
+        return None
+    finally:
+        if conn: conn.close()
+
+def get_journalist_by_id(user_id: int) -> dict | None:
+    """Retrieves a journalist by ID. Returns a dict or None. (Used by Flask-Login)"""
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute("SELECT id, username, password_hash FROM journalists WHERE id = ?", (user_id,))
+        journalist_row = cursor.fetchone()
+        if journalist_row:
+            return dict(journalist_row)
+        return None
+    except sqlite3.Error as e:
+        logger.error(f"Database error retrieving journalist by ID '{user_id}': {e}")
+        return None
+    finally:
+        if conn: conn.close()
+
+def verify_journalist_password(username: str, password_to_check: str) -> bool:
+    """Verifies a journalist's password against the stored hash."""
+    journalist_data = get_journalist_by_username(username)
+    if journalist_data and check_password_hash(journalist_data['password_hash'], password_to_check):
+        return True
+    return False
+
+# --- RSA Public Key Management (existing functions, largely unchanged but reviewed) ---
+
+def add_public_key(key_pem_str: str, identifier_hint: str | None = None) -> bool:
+    if not key_pem_str.strip().startswith("-----BEGIN PUBLIC KEY-----"):
+        logger.error("Invalid public key format (missing PEM header).")
+        return False
+
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        logger.info(
+            f"KEY_MANAGER.ADD_PUBLIC_KEY: Attempting to INSERT key. Hint: '{identifier_hint}'. PEM: {key_pem_str[:40]}...")
+        cursor.execute(
+            "INSERT INTO rsa_public_keys (key_pem, key_identifier_hint) VALUES (?, ?)",
             (key_pem_str, identifier_hint)
         )
         conn.commit()
-        logger.info(f"Public key added. DB Row ID: {cursor.lastrowid}, Hint: '{identifier_hint}'")
+        logger.info(
+            f"Public key added (DB Hint: {identifier_hint}). DB Row ID: {cursor.lastrowid}")
         return True
-    except sqlite3.IntegrityError:
-        logger.warning(f"Failed to add public key (Hint: '{identifier_hint}'): Key PEM already exists.")
+    except sqlite3.IntegrityError as ie:
+        logger.warning(f"IntegrityError (likely duplicate) adding public key (Hint: {identifier_hint}). Error: {ie}")
         return False
     except sqlite3.Error as e:
-        logger.error(f"SQLite DB error adding public key (Hint: '{identifier_hint}'): {e}", exc_info=True)
+        logger.error(f"Database error adding public key (Hint: {identifier_hint}). Error: {e}")
         return False
     finally:
-        if conn:
-            conn.close()
-
+        if conn: conn.close()
 
 def get_available_public_key() -> tuple[str, int, str | None] | None:
-    """Retrieves an available (unused) RSA public key PEM, its ID, and its hint."""
-    conn = None
+    """Returns (key_pem, key_id, key_identifier_hint) or None."""
+    conn = get_db_connection()
     try:
-        conn = get_db_connection()
         cursor = conn.cursor()
-        cursor.execute("""
-            SELECT id, key_pem, key_identifier_hint 
-            FROM rsa_public_keys 
-            WHERE is_used = 0 
-            ORDER BY RANDOM() 
-            LIMIT 1
-        """)
+        cursor.execute(
+            "SELECT id, key_pem, key_identifier_hint FROM rsa_public_keys WHERE is_used = 0 ORDER BY RANDOM() LIMIT 1")
         row = cursor.fetchone()
         if row:
-            logger.info(f"Retrieved available public key. ID: {row['id']}, Hint: '{row['key_identifier_hint']}'")
+            logger.info(f"Retrieved available public key ID: {row['id']}, Hint: {row['key_identifier_hint']}")
             return row['key_pem'], row['id'], row['key_identifier_hint']
         else:
-            logger.warning("No available (unused) RSA public keys found.")
+            logger.warning("No available RSA public keys in the database.")
             return None
     except sqlite3.Error as e:
-        logger.error(f"SQLite DB error retrieving available public key: {e}", exc_info=True)
+        logger.error(f"Database error retrieving public key: {e}")
         return None
     finally:
-        if conn:
-            conn.close()
-
+        if conn: conn.close()
 
 def mark_key_as_used(key_id: int) -> bool:
-    """Marks a specific RSA public key as used in the database."""
-    conn = None
+    conn = get_db_connection()
     try:
-        conn = get_db_connection()
         cursor = conn.cursor()
         cursor.execute("""
-            UPDATE rsa_public_keys 
-            SET is_used = 1, used_at = CURRENT_TIMESTAMP 
+            UPDATE rsa_public_keys
+            SET is_used = 1, used_at = CURRENT_TIMESTAMP
             WHERE id = ? AND is_used = 0
         """, (key_id,))
         conn.commit()
@@ -137,39 +190,13 @@ def mark_key_as_used(key_id: int) -> bool:
             logger.info(f"Public key ID {key_id} marked as used.")
             return True
         else:
-            cursor.execute("SELECT is_used FROM rsa_public_keys WHERE id = ?", (key_id,))
-            row = cursor.fetchone()
-            if row and row['is_used'] == 1:
-                logger.warning(f"Key ID {key_id} already marked as used.")
-            elif not row:
-                logger.warning(f"Key ID {key_id} not found to mark as used.")
-            else:
-                logger.warning(f"Failed to mark key ID {key_id} as used (unexpected state).")
+            logger.warning(f"Failed to mark key ID {key_id} as used (already used or not found).")
             return False
     except sqlite3.Error as e:
-        logger.error(f"SQLite DB error marking key ID {key_id} as used: {e}", exc_info=True)
+        logger.error(f"Database error marking key as used: {e}")
         return False
     finally:
-        if conn:
-            conn.close()
+        if conn: conn.close()
 
-
-def count_available_public_keys() -> int:
-    """Counts the number of available (unused) RSA public keys."""
-    conn = None
-    try:
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        cursor.execute("SELECT COUNT(*) FROM rsa_public_keys WHERE is_used = 0")
-        count = cursor.fetchone()[0]
-        logger.debug(f"Counted {count} available public keys.")
-        return count
-    except sqlite3.Error as e:
-        logger.error(f"SQLite DB error counting available public keys: {e}", exc_info=True)
-        return -1  # Indicate error
-    finally:
-        if conn:
-            conn.close()
-
-
+# Initialize database schema on import
 initialize_key_database()

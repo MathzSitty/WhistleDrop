@@ -1,13 +1,10 @@
 Flask
+Flask-Login
+Werkzeug
 cryptography
 pyOpenSSL
 gunicorn
-requests[socks] # Still needed for Journalist Interface access via Tor SOCKS proxy
+requests[socks] # socks ist wichtig für Tor-Proxy im Journalist-Tool
 stem
 Pillow
-keyring # Can still be used by journalist GUI for storing API key for Journalist Interface
-
-# paramiko, bcrypt, pysocks are no longer strictly needed by the core application
-# if SFTP is completely removed. requests[socks] might pull in pysocks.
-# If pysocks is not pulled in by requests[socks], and you have other tools
-# that might need it, you can keep it. For now, assuming requests[socks] is sufficient.
+keyring

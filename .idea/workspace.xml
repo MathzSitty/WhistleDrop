@@ -4,10 +4,8 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="e4858ed9-af9f-4456-821b-72f775f2afc1" name="Changes" comment="Fixed a major security issue and now using keyring to store users API securely, added keyring in the requirements as well.">
-      <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
+    <list default="true" id="e4858ed9-af9f-4456-821b-72f775f2afc1" name="Changes" comment="Changed the whole idea of using an API to using sftp and ssh instead for more security and using https now as well.">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/journalist_tool/crypto_utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/journalist_tool/crypto_utils.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/journalist_tool/decrypt_tool.py" beforeDir="false" afterPath="$PROJECT_DIR$/journalist_tool/decrypt_tool.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/journalist_tool/gui_config.json" beforeDir="false" afterPath="$PROJECT_DIR$/journalist_tool/gui_config.json" afterDir="false" />
@@ -20,7 +18,9 @@
       <change beforePath="$PROJECT_DIR$/whistledrop_server/config.py" beforeDir="false" afterPath="$PROJECT_DIR$/whistledrop_server/config.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/whistledrop_server/crypto_utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/whistledrop_server/crypto_utils.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/whistledrop_server/key_manager.py" beforeDir="false" afterPath="$PROJECT_DIR$/whistledrop_server/key_manager.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/whistledrop_server/sftp_data/authorized_keys" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/whistledrop_server/storage_manager.py" beforeDir="false" afterPath="$PROJECT_DIR$/whistledrop_server/storage_manager.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/whistledrop_server/templates/journalist_interface.html" beforeDir="false" afterPath="$PROJECT_DIR$/whistledrop_server/templates/journalist_interface.html" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/whistledrop_server/templates/upload.html" beforeDir="false" afterPath="$PROJECT_DIR$/whistledrop_server/templates/upload.html" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/whistledrop_server/wsgi.py" beforeDir="false" afterPath="$PROJECT_DIR$/whistledrop_server/wsgi.py" afterDir="false" />
     </list>
@@ -59,21 +59,24 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent">{
-  &quot;keyToString&quot;: {
-    &quot;Batch.start_tor_manager.executor&quot;: &quot;Run&quot;,
-    &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
-    &quot;Python.app.executor&quot;: &quot;Run&quot;,
-    &quot;Python.config.executor&quot;: &quot;Run&quot;,
-    &quot;Python.journalist_gui.executor&quot;: &quot;Run&quot;,
-    &quot;Python.tor_manager.executor&quot;: &quot;Run&quot;,
-    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
-    &quot;git-widget-placeholder&quot;: &quot;main&quot;,
-    &quot;last_opened_file_path&quot;: &quot;D:/WhistleDrop/whistledrop_server&quot;,
-    &quot;settings.editor.selected.configurable&quot;: &quot;com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable&quot;
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "Batch.start_tor_manager.executor": "Run",
+    "ModuleVcsDetector.initialDetectionPerformed": "true",
+    "Python.app.executor": "Run",
+    "Python.config.executor": "Run",
+    "Python.create_journalist_account.executor": "Run",
+    "Python.generate_ssl_certs.executor": "Run",
+    "Python.journalist_gui.executor": "Run",
+    "Python.socket.executor": "Run",
+    "Python.tor_manager.executor": "Run",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.git.unshallow": "true",
+    "git-widget-placeholder": "main",
+    "last_opened_file_path": "D:/WhistleDrop/whistledrop_server",
+    "settings.editor.selected.configurable": "com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable"
   }
-}</component>
+}]]></component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
       <recent name="D:\WhistleDrop\whistledrop_server" />
@@ -146,7 +149,15 @@
       <option name="project" value="LOCAL" />
       <updated>1747004253227</updated>
     </task>
-    <option name="localTasksCounter" value="7" />
+    <task id="LOCAL-00007" summary="Changed the whole idea of using an API to using sftp and ssh instead for more security and using https now as well.">
+      <option name="closed" value="true" />
+      <created>1747260615870</created>
+      <option name="number" value="00007" />
+      <option name="presentableId" value="LOCAL-00007" />
+      <option name="project" value="LOCAL" />
+      <updated>1747260615870</updated>
+    </task>
+    <option name="localTasksCounter" value="8" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -177,6 +188,7 @@
     <MESSAGE value="Removed unused file." />
     <MESSAGE value="Removed more unused files." />
     <MESSAGE value="Fixed a major security issue and now using keyring to store users API securely, added keyring in the requirements as well." />
-    <option name="LAST_COMMIT_MESSAGE" value="Fixed a major security issue and now using keyring to store users API securely, added keyring in the requirements as well." />
+    <MESSAGE value="Changed the whole idea of using an API to using sftp and ssh instead for more security and using https now as well." />
+    <option name="LAST_COMMIT_MESSAGE" value="Changed the whole idea of using an API to using sftp and ssh instead for more security and using https now as well." />
   </component>
 </project>

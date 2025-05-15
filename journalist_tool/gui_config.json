@@ -1,9 +1,7 @@
 {
-    "journalist_interface_url": "https://yourwhistledroponionaddress.onion/wd-journalist",
-    "journalist_api_key": "YOUR_API_KEY_FOR_JOURNALIST_INTERFACE_HERE",
+    "server_url": "http://qha6rgy2xdigp3cvuartjkz3aax7w6uccoyeuot7bluhbtikgnqenpid.onion",
+    "last_username": "journalist",
     "tor_socks_host": "127.0.0.1",
-    "tor_socks_port": 9150,
-    "local_encrypted_submissions_import_dir": "local_encrypted_submissions_import/",
-    "local_decrypted_submissions_output_dir": "decrypted_submissions/",
-    "default_rsa_private_keys_dir": "private_keys/"
+    "tor_socks_port": 9050,
+    "verify_ssl": false
 }
