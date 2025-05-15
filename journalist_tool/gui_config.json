@@ -1,7 +1,6 @@
 {
-    "server_url": "http://qha6rgy2xdigp3cvuartjkz3aax7w6uccoyeuot7bluhbtikgnqenpid.onion",
+    "server_url": "https://upx77ow7mis5moswqkb7utcq3gct3lfahgilosz5keiny6dbu5opqgid.onion",
     "last_username": "journalist",
     "tor_socks_host": "127.0.0.1",
-    "tor_socks_port": 9050,
-    "verify_ssl": false
+    "tor_socks_port": 9150
 }
