@@ -1,255 +1,291 @@
-# WhistleDrop - Secure & Anonymous Whistleblower Platform (SecureDrop-Inspired Workflow)
+# WhistleDrop - Secure & Anonymous Whistleblower Platform
 
-WhistleDrop ist eine Prototyp-Implementierung einer sicheren und anonymen Whistleblower-Plattform, deren Workflow stark von SecureDrop inspiriert ist. Sie ist darauf ausgelegt, als Tor Hidden Service betrieben zu werden. Whistleblower laden Dateien über einen HTTPS-Onion-Service hoch. Journalisten erhalten Benachrichtigungen über neue Einreichungen über eine separate, gesicherte Web-Schnittstelle (ebenfalls über Tor). Die eigentlichen verschlüsselten Daten werden durch einen Administrator exportiert und offline (z.B. per USB-Stick) an den Journalisten übergeben, der sie dann auf einer isolierten "Secure Viewing Station" (SVS) entschlüsselt.
+WhistleDrop ist eine Prototyp-Implementierung einer sicheren und anonymen Whistleblower-Plattform. Sie ist darauf ausgelegt, als Tor Hidden Service betrieben zu werden und ermöglicht es Whistleblowern, Dateien (z.B. Dokumente, Bilder) einzureichen, die dann Ende-zu-Ende für einen designierten Journalisten verschlüsselt werden.
 
 ## Inhaltsverzeichnis
 
 1.  [Grundprinzipien](#grundprinzipien)
 2.  [Entitäten](#entitäten)
-3.  [Systemarchitektur & Workflow](#systemarchitektur--workflow)
+3.  [Systemarchitektur](#systemarchitektur)
 4.  [Sicherheitsdesign](#sicherheitsdesign)
 5.  [Projektstruktur](#projektstruktur)
-6.  [Setup und Installation (Server-Administrator)](#setup-und-installation-server-administrator)
-    *   [Voraussetzungen (Server)](#voraussetzungen-server)
-    *   [Umgebungsvariablen konfigurieren (Server)](#umgebungsvariablen-konfigurieren-server)
-    *   [SSL-Zertifikat generieren (Server)](#ssl-zertifikat-generieren-server)
-    *   [Installation der Abhängigkeiten (Server)](#installation-der-abhängigkeiten-server)
-    *   [Verzeichnisse erstellen (Server)](#verzeichnisse-erstellen-server)
-7.  [Setup und Installation (Journalist)](#setup-und-installation-journalist)
-    *   [Voraussetzungen (Journalist Workstation / SVS)](#voraussetzungen-journalist-workstation--svs)
-    *   [RSA-Schlüsselpaare für Inhaltsverschlüsselung generieren (Journalist)](#rsa-schlüsselpaare-für-inhaltsverschlüsselung-generieren-journalist)
-    *   [Installation der Abhängigkeiten (Journalist)](#installation-der-abhängigkeiten-journalist)
-8.  [Administrative Aufgaben (Server-Administrator)](#administrative-aufgaben-server-administrator)
-    *   [Öffentliche RSA-Schlüssel (für Verschlüsselung) zur Server-Datenbank hinzufügen](#öffentliche-rsa-schlüssel-für-verschlüsselung-zur-server-datenbank-hinzufügen)
-    *   [API-Key für Journalist Interface sicher generieren und mitteilen](#api-key-für-journalist-interface-sicher-generieren-und-mitteilen)
-9.  [WhistleDrop Server starten (Server-Administrator)](#whistledrop-server-starten-server-administrator)
-    *   [Mit `tor_manager.py` (Empfohlen für Testen mit ephemerem Service)](#mit-tor_managerpy-empfohlen-für-testen-mit-ephemerem-service)
+6.  [Setup und Installation](#setup-und-installation)
+    *   [Voraussetzungen](#voraussetzungen)
+    *   [Umgebungsvariablen konfigurieren](#umgebungsvariablen-konfigurieren)
+    *   [Installation der Abhängigkeiten](#installation-der-abhängigkeiten)
+    *   [Verzeichnisse und Zertifikate erstellen](#verzeichnisse-und-zertifikate-erstellen)
+    *   [Journalist: RSA-Schlüsselpaare generieren](#journalist-rsa-schlüsselpaare-generieren)
+    *   [Server-Admin: Journalisten-Account erstellen](#server-admin-journalisten-account-erstellen)
+    *   [Server-Admin: Öffentliche Schlüssel zum Server hochladen (via GUI)](#server-admin-öffentliche-schlüssel-zum-server-hochladen-via-gui)
+7.  [WhistleDrop Server starten](#whistledrop-server-starten)
+    *   [Mit `tor_manager.py` (Empfohlen für Testen mit automatisiertem Standalone Tor & ephemerem Service)](#mit-tor_managerpy-empfohlen-für-testen-mit-automatisiertem-standalone-tor--ephemerem-service)
     *   [Mit manuellem Tor Hidden Service & Gunicorn (Produktion)](#mit-manuellem-tor-hidden-service--gunicorn-produktion)
-10. [Benutzung](#benutzung)
-    *   [Whistleblower: Datei über HTTPS-Onion-Service hochladen](#whistleblower-datei-über-https-onion-service-hochladen)
-    *   [Journalist: Metadaten über Journalist Interface abrufen](#journalist-metadaten-über-journalist-interface-abrufen)
-    *   [Server-Administrator: Einreichungen exportieren](#server-administrator-einreichungen-exportieren)
-    *   [Journalist: Exportierte Einreichungen importieren und entschlüsseln (GUI/CLI)](#journalist-exportierte-einreichungen-importieren-und-entschlüsseln-guicli)
-11. [Wichtige Sicherheitshinweise & Limitierungen](#wichtige-sicherheitshinweise--limitierungen)
-12. [Mögliche zukünftige Verbesserungen](#mögliche-zukünftige-verbesserungen)
+8.  [Benutzung](#benutzung)
+    *   [Whistleblower: Datei hochladen](#whistleblower-datei-hochladen)
+    *   [Journalist: Journalist GUI Tool verwenden](#journalist-journalist-gui-tool-verwenden)
+9.  [Wichtige Sicherheitshinweise & Limitierungen](#wichtige-sicherheitshinweise--limitierungen)
+10. [Mögliche zukünftige Verbesserungen](#mögliche-zukünftige-verbesserungen)
 
 ## Grundprinzipien
 
-*   **Anonymität (Whistleblower):** Interaktion über HTTPS Tor Hidden Service.
-*   **Vertraulichkeit (Ende-zu-Ende):** Dateien werden auf dem Server mit AES-GCM verschlüsselt (dateispezifischer Schlüssel). Dieser AES-Schlüssel wird mit dem öffentlichen RSA-Schlüssel des Journalisten verschlüsselt.
-*   **Integrität:** AES-GCM bietet authentifizierte Verschlüsselung.
-*   **Keine unverschlüsselten Daten auf dem Server-Festplatte:** Originaldateien und AES-Schlüssel werden nie unverschlüsselt gespeichert.
-*   **Einmalige Verwendung öffentlicher RSA-Schlüssel:** Jeder RSA-Schlüssel wird nur einmal verwendet und dann als "benutzt" markiert.
-*   **Isolation der Entschlüsselung:** Journalisten entschlüsseln Daten auf einer separaten, idealerweise isolierten Secure Viewing Station (SVS), nicht durch direkten Online-Zugriff auf den Submission-Server.
-*   **Kontrollierter Datenfluss zum Journalisten:** Verschlüsselte Daten werden vom Admin exportiert und offline (z.B. USB) an den Journalisten übergeben.
+*   **Anonymität:** Whistleblower interagieren über Tor mit der Plattform, um ihre IP-Adresse zu verschleiern.
+*   **Vertraulichkeit:** Eingereichte Dateien werden sofort auf dem Server mit starker symmetrischer Verschlüsselung (AES-GCM) verschlüsselt. Der symmetrische Schlüssel selbst wird dann mit asymmetrischer Verschlüsselung (RSA-OAEP) unter Verwendung eines vorab hochgeladenen öffentlichen Schlüssels des Journalisten verschlüsselt. Der ursprüngliche Dateiname wird ebenfalls verschlüsselt.
+*   **Integrität:** AES-GCM bietet authentifizierte Verschlüsselung und stellt sicher, dass Daten nicht manipuliert werden.
+*   **Keine unverschlüsselten Daten auf der Festplatte:** Weder die Originaldatei noch der AES-Schlüssel werden jemals unverschlüsselt auf die Festplatte des Servers geschrieben.
+*   **Einmalige Verwendung öffentlicher Schlüssel:** Jeder auf dem Server gespeicherte öffentliche RSA-Schlüssel des Journalisten wird nur einmal zum Verschlüsseln eines AES-Schlüssels verwendet und dann als "benutzt" markiert.
+*   **Dateigrößenbeschränkung:** Der Server erzwingt eine maximale Uploadgröße (konfigurierbar), um Ressourcenmissbrauch zu verhindern.
 
 ## Entitäten
 
-1.  **Whistleblower:** Anonyme Person, die Dateien über den HTTPS Tor Hidden Service hochlädt.
-2.  **WhistleDrop Server (Application Server):** Server mit Flask-Anwendung für Uploads und das Journalist Interface (Metadaten). Läuft als Tor Hidden Service.
-3.  **Server-Administrator:** Wartet den Server, fügt Journalisten-RSA-Schlüssel hinzu, exportiert Einreichungen.
-4.  **Journalist:** Empfänger der Information.
-    *   Greift über Tor auf das **Journalist Interface** zu, um Metadaten neuer Einreichungen zu sehen.
-    *   Erhält exportierte, verschlüsselte Einreichungen vom Administrator.
-    *   Verwendet eine **Secure Viewing Station (SVS)** (lokaler, isolierter Rechner) und das Journalist Tool (GUI/CLI), um die Einreichungen mit seinen privaten RSA-Schlüsseln zu entschlüsseln.
+1.  **Whistleblower:** Eine anonyme Person, die eine Datei über den Tor Hidden Service hochlädt.
+2.  **WhistleDrop Server:** Ein Server, auf dem die WhistleDrop Python/Flask-Anwendung läuft und der als Tor Hidden Service erreichbar ist. Er handhabt die Dateiaufnahme, Verschlüsselung und Speicherung. Der Server verwendet HTTPS mit einem selbstsignierten Zertifikat für die lokale Kommunikation, auf die der Tor Hidden Service weiterleitet.
+3.  **Journalist:** Der Empfänger der Information. Der Journalist besitzt die RSA-Privatschlüssel, die notwendig sind, um die AES-Schlüssel und anschließend die eingereichten Dateien zu entschlüsseln. Er verwendet das Journalist GUI Tool und authentifiziert sich per Username/Passwort am Server.
 
-## Systemarchitektur & Workflow
+## Systemarchitektur
 
 1.  **Aktion des Whistleblowers:**
-    *   Verbindet sich über Tor Browser mit `https://<onion-address-uploads>` von WhistleDrop.
-    *   Lädt eine Datei hoch.
+    *   Verbindet sich über den Tor Browser mit der `https://<onion-adresse>.onion`-Adresse von WhistleDrop. (Muss ggf. eine Zertifikatswarnung für das selbstsignierte Zertifikat des Hidden Service akzeptieren).
+    *   Lädt eine Datei über ein einfaches Webformular hoch.
 2.  **Aktion des WhistleDrop Servers (beim Upload):**
-    *   Empfängt Datei (HTTPS), prüft Größe.
-    *   Generiert AES-Schlüssel, verschlüsselt Datei und Dateinamen.
-    *   Holt verfügbaren öffentlichen RSA-Schlüssel (mit Hint) aus DB.
-    *   Verschlüsselt AES-Schlüssel mit diesem RSA-Schlüssel.
-    *   Speichert alle verschlüsselten Komponenten und Metadaten (inkl. RSA Key Hint).
-    *   Markiert RSA-Schlüssel als benutzt.
-    *   Gibt Erfolgsmeldung an Whistleblower.
-3.  **Aktion des Journalisten (Metadaten-Abruf):**
-    *   Verbindet sich über Tor Browser (oder GUI-integrierten Tor-Zugriff) mit `https://<onion-address-journalist-interface>`.
-    *   Authentifiziert sich mit einem API-Key.
-    *   Sieht eine Liste neuer Einreichungen (Submission ID, Zeitstempel, Key Hint). **Kein Download der Dateien hier!**
-4.  **Aktion des Server-Administrators (Datenexport):**
-    *   Verwendet das Skript `utils/export_submissions.py` auf dem Server, um ausgewählte (oder alle neuen) Einreichungen zu exportieren.
-    *   Das Skript packt die verschlüsselten Dateien jeder Einreichung (z.B. in ein ZIP-Archiv pro Submission oder ein Gesamtarchiv).
-    *   Überträgt diese exportierten Daten sicher auf ein Wechselmedium (z.B. verschlüsselter USB-Stick).
-5.  **Datenübergabe (Offline):**
-    *   Der Administrator übergibt das Wechselmedium physisch ("Sneakernet") an den Journalisten.
-6.  **Aktion des Journalisten (Import & Entschlüsselung auf SVS):**
-    *   Überträgt die exportierten Daten vom Wechselmedium auf seine Secure Viewing Station (SVS).
-    *   Verwendet das `journalist_tool/journalist_gui.py` (oder `decrypt_tool.py`):
-        *   Wählt das Verzeichnis mit den importierten, verschlüsselten Einreichungen.
-        *   Das Tool listet die verfügbaren (lokalen) Submission IDs und deren Key Hints.
-        *   Wählt eine Submission und den passenden privaten RSA-Schlüssel (anhand des Hints).
-        *   Gibt ggf. das Passwort für den privaten RSA-Schlüssel ein.
-        *   Das Tool entschlüsselt die lokalen Dateien.
-        *   Speichert die entschlüsselte Datei auf der SVS.
+    *   Empfängt die Datei im Speicher. Prüft auf Dateigrößenlimit.
+    *   Generiert einen einzigartigen, zufälligen AES-256-Schlüssel.
+    *   Verschlüsselt die Dateidaten und den Originaldateinamen im Speicher mit AES-256-GCM.
+    *   Ruft einen verfügbaren öffentlichen RSA-Schlüssel (inkl. eines "Key Hints" zur Identifizierung) aus seiner lokalen Datenbank ab.
+    *   Verschlüsselt den AES-Schlüssel mit diesem öffentlichen RSA-Schlüssel.
+    *   Speichert die verschlüsselte Datei, den verschlüsselten AES-Schlüssel, den verschlüsselten Dateinamen, die ID des verwendeten öffentlichen RSA-Schlüssels und den Key Hint in einem eindeutigen Einreichungsverzeichnis.
+    *   Markiert den öffentlichen RSA-Schlüssel in seiner Datenbank als "benutzt".
+    *   Gibt eine Erfolgsmeldung an den Whistleblower zurück.
+3.  **Aktion des Journalisten (Abruf & Entschlüsselung mit GUI):**
+    *   Verwendet das `journalist_tool/journalist_gui.py` Skript.
+    *   Konfiguriert die Server URL (die `https://<onion-adresse>.onion`-Adresse oder `http://<onion-adresse>.onion` je nach HS-Konfiguration, oder lokal `https://127.0.0.1:<https_port>`).
+    *   Loggt sich mit seinem Benutzernamen und Passwort am Server ein.
+    *   Kann neue RSA-Schlüsselpaare (optional passwortgeschützt) generieren und öffentliche Schlüssel zum Server hochladen.
+    *   Ruft die Liste der Einreichungen ab. Die Liste zeigt die Submission ID und einen "Key Hint".
+    *   Wählt eine Einreichung und den zugehörigen privaten Schlüssel (anhand des Hints).
+    *   Gibt ggf. das Passwort für den privaten Schlüssel ein.
+    *   Das Tool lädt die verschlüsselten Komponenten herunter, entschlüsselt den AES-Schlüssel mit dem privaten RSA-Schlüssel, entschlüsselt dann den Originaldateinamen und den Dateiinhalt mit dem AES-Schlüssel.
+    *   Speichert die entschlüsselte Datei lokal.
 
 ## Sicherheitsdesign
 
-*   **Verschlüsselung (Inhalt):** AES-256-GCM (Dateiinhalt & Dateiname), RSA-4096 mit OAEP (AES-Schlüssel).
-*   **Schlüsselverwaltung (Inhalt):** Wie zuvor, private RSA-Schlüssel verlassen nie den Journalisten/SVS.
-*   **Transportverschlüsselung:**
-    *   Whistleblower zu Server: HTTPS über Tor.
-    *   Journalist zu Journalist Interface (Metadaten): HTTPS über Tor.
-*   **Authentifizierung (Journalist Interface):** API-Key.
-*   **Datenintegrität beim Export/Import:** ZIP-Archive können Checksummen verwenden. Der Prozess selbst minimiert Online-Risiken.
-*   **Isolation:** Die Entschlüsselung findet auf einer (ideal) Air-Gapped SVS statt.
-*   **Tor Hidden Service:** Verschleiert Serverstandort, bietet anonymen Zugriff.
+*   **Verschlüsselung:**
+    *   Dateiinhalt & Dateiname: AES-256-GCM.
+    *   AES-Schlüssel: RSA-4096 mit OAEP-Padding.
+*   **Schlüsselverwaltung:**
+    *   AES-Schlüssel sind dateispezifisch, einmalig verwendet und verschlüsselt gespeichert.
+    *   Journalisten-RSA-Schlüsselpaare werden vom Journalisten offline generiert (optional passwortgeschützt). Nur öffentliche Schlüssel (mit einem Hint) werden dem Server über das Journalist GUI hinzugefügt.
+    *   Server führt eine Datenbank mit verfügbaren öffentlichen RSA-Schlüsseln und deren Hints. Jeder öffentliche Schlüssel wird nur einmal verwendet.
+    *   Private RSA-Schlüssel verlassen *niemals* den Journalisten.
+*   **In-Memory-Verarbeitung:** Hochgeladene Dateien und AES-Schlüssel werden im Speicher verschlüsselt, bevor (verschlüsselte) Derivate auf die Festplatte geschrieben werden.
+*   **Tor Hidden Service:** Bietet Anonymität auf Transportebene für den Whistleblower und verschleiert den Serverstandort. Der Service kann so konfiguriert werden, dass er HTTPS mit einem selbstsignierten Zertifikat anbietet.
+*   **Authentifizierung:** Journalisten-Endpunkte sind durch einen Login (Username/Passwort) geschützt. Passwörter werden serverseitig gehasht gespeichert. Die Kommunikation erfolgt über HTTPS.
 
 ## Projektstruktur
 whistledrop/
-├── whistledrop_server/
-│ ├── app.py # Flask app (HTTPS Uploads & Journalist Interface)
-│ ├── crypto_utils.py # Server-seitige Kryptofunktionen
-│ ├── key_manager.py # Verwaltung RSA-Schlüssel für Verschlüsselung (DB)
-│ ├── storage_manager.py # Speicherung der Einreichungen
-│ ├── config.py # Konfiguration
-│ ├── templates/ # HTML-Vorlagen
-│ │ ├── upload.html
-│ │ └── journalist_interface.html # NEU
-│ ├── data/ # Datenverzeichnis - NICHT versionieren!
-│ ├── certs/ # SSL Zertifikate - NICHT versionieren!
-│ └── wsgi.py # WSGI-Einstiegspunkt
-├── journalist_tool/
-│ ├── journalist_gui.py # Tkinter GUI (arbeitet mit lokalen, exportierten Daten)
-│ ├── decrypt_tool.py # CLI Tool (arbeitet mit lokalen, exportierten Daten)
-│ ├── crypto_utils.py # Client-seitige Kryptofunktionen
-│ ├── gui_config.json # GUI Konfig (URL Journalist Interface, lokale Pfade) - NICHT versionieren
-│ ├── private_keys/ # Private RSA-Schlüssel des Journalisten - NICHT versionieren!
-│ ├── public_keys_for_server/ # Öffentliche RSA-Schlüssel für Server-Admin
-│ ├── decrypted_submissions/ # Standard-Ausgabeort für entschlüsselte Dateien
-│ └── local_encrypted_submissions_import/ # Standard-Eingabeort für vom Admin exportierte Daten
-├── utils/
-│ ├── generate_rsa_keys.py # Erstellt RSA-Schlüsselpaare für Inhaltsverschlüsselung
-│ ├── add_public_key_to_db.py # Admin-Skript: Fügt RSA Public Keys zur Server-DB hinzu
-│ ├── export_submissions.py # NEU: Admin-Skript zum Exportieren von Einreichungen
-│ └── tor_manager.py # Verwaltet Tor Hidden Service (nur HTTPS)
+├── whistledrop_server/         # Flask server application
+│   ├── app.py                  # Main Flask app, routes, login logic
+│   ├── crypto_utils.py         # Cryptographic functions
+│   ├── key_manager.py          # Manages RSA public keys & journalist accounts (SQLite DB)
+│   ├── models.py               # User model for Flask-Login (Journalist)
+│   ├── storage_manager.py      # Handles file storage for submissions
+│   ├── config.py               # Configuration (ports, paths, etc.)
+│   ├── templates/              # HTML templates
+│   │   ├── upload.html         # Whistleblower upload form
+│   │   └── login.html          # Journalist login form
+│   ├── data/                   # Data directory (submissions/, db/) - NICHT versionieren!
+│   │   └── db/key_store.db     # SQLite Datenbank
+│   ├── certs/                  # SSL certificates (cert.pem, key.pem) - NICHT versionieren!
+│   └── wsgi.py                 # WSGI entry for Gunicorn
+├── journalist_tool/            # Scripts and GUI for the journalist
+│   ├── journalist_gui.py       # Tkinter GUI application
+│   ├── crypto_utils.py         # Crypto functions (shared logic with server)
+│   ├── gui_config.json         # GUI configuration (server URL, SOCKS proxy)
+│   ├── private_keys/           # Journalist stores private keys here - NICHT versionieren!
+│   ├── public_keys_for_server/ # Generated public keys for server upload
+│   └── decrypted_submissions/  # Default location for decrypted files - NICHT versionieren!
+├── utils/                      # Utility scripts
+│   ├── generate_rsa_keys.py    # To create RSA key pairs
+│   ├── add_public_key_to_db.py # To add public keys to server DB (CLI)
+│   ├── create_journalist_account.py # To create journalist accounts (CLI)
+│   ├── generate_ssl_certs.py   # To create self-signed SSL certs for Flask
+│   └── tor_manager.py          # Script to start/manage Standalone Tor & WhistleDrop server
 ├── .gitignore
 ├── requirements.txt
 └── README.md (Diese Datei)
 
+## Setup und Installation
 
-## Setup und Installation (Server-Administrator)
+### Voraussetzungen
 
-### Voraussetzungen (Server)
 *   Python 3.9+
-*   `pip`
-*   Tor (laufender Dienst, ControlPort konfiguriert)
-*   OpenSSL (Kommandozeile)
+*   `pip` (Python Paket-Installer)
+*   **Standalone Tor (Expert Bundle):** Empfohlen für den Serverbetrieb mit `tor_manager.py`. Download von [torproject.org](https://www.torproject.org/download/tor/).
+*   **Tor Browser:** Für den Whistleblower und optional für den Journalisten, um auf `.onion`-Adressen zuzugreifen.
+*   (Optional) Git zum Klonen des Repositories.
+*   (Optional) Ein SQLite Browser zum Inspizieren der `key_store.db`.
 
-### Umgebungsvariablen konfigurieren (Server)
-*   `WHISTLEDROP_JOURNALIST_API_KEY`: Starker, geheimer API-Key für das Journalist Interface.
-    *   Generieren: `python -c "import secrets; print(secrets.token_hex(32))"`
-    *   Sicher an den/die Journalisten übermitteln.
-*   `TOR_CONTROL_PASSWORD` (Optional): Passwort für Tor ControlPort.
-*   `WHISTLEDROP_SECRET_KEY` (Optional): Für Flask Sessions.
+### Umgebungsvariablen konfigurieren
 
-### SSL-Zertifikat generieren (Server)
-Einmalig für den HTTPS-Dienst (siehe vorherige Anleitung, Phase 1, Schritt 5).
-```bash
-mkdir -p whistledrop_server/certs
-openssl req -x509 -newkey rsa:4096 -nodes \
-        -keyout whistledrop_server/certs/key.pem \
-        -out whistledrop_server/certs/cert.pem \
-        -days 3650 -subj "/CN=yourwhistledrop.onion"
+*   **Für den WhistleDrop Server (wo `tor_manager.py` läuft):**
+    *   `WHISTLEDROP_SECRET_KEY` (Optional, für Flask Sessions): Ein langer, zufälliger String. Wenn nicht gesetzt, wird ein Standardwert verwendet (nicht für Produktion empfohlen).
+    *   `TOR_CONTROL_PASSWORD` (Optional, **nicht empfohlen bei CookieAuthentication**): Nur wenn der ControlPort des Standalone Tor mit `HashedControlPassword` gesichert ist. `tor_manager.py` ist für `CookieAuthentication` mit dem Standalone Tor optimiert.
 
-Installation der Abhängigkeiten (Server)
-Wie zuvor: Projekt klonen/herunterladen, venv erstellen, pip install -r requirements.txt.
-Verzeichnisse erstellen (Server)
-config.py versucht dies, aber zur Sicherheit:
-mkdir -p whistledrop_server/data/submissions whistledrop_server/data/db whistledrop_server/certs
+*   **Für die Maschine des Journalisten (wo `journalist_gui.py` läuft, für `.onion`-Zugriff):**
+    *   `HTTP_PROXY="socks5h://127.0.0.1:9050"` (oder der Port deines Tor SOCKS Proxys, z.B. `9150` für Tor Browser)
+    *   `HTTPS_PROXY="socks5h://127.0.0.1:9050"`
+    *   `NO_PROXY="localhost,127.0.0.1"` (Wichtig, damit lokale Serveradressen nicht über den Proxy geleitet werden)
 
-Setup und Installation (Journalist)
-Voraussetzungen (Journalist Workstation / SVS)
-Python 3.9+
-pip
-(Für GUI) Tkinter (meist bei Python dabei)
-(Für Zugriff auf Journalist Interface) Tor Browser oder systemweiter Tor-Dienst mit SOCKS-Proxy.
-RSA-Schlüsselpaare für Inhaltsverschlüsselung generieren (Journalist)
-Auf der (sicheren) Maschine des Journalisten:
-# Im geklonten/heruntergeladenen Projektverzeichnis
-python utils/generate_rsa_keys.py
+### Installation der Abhängigkeiten
 
-Private RSA-Schlüssel (journalist_tool/private_keys/) geheim halten!
-Öffentliche RSA-Schlüssel (journalist_tool/public_keys_for_server/) dem Server-Admin geben.
-Installation der Abhängigkeiten (Journalist)
-Wenn das Projekt (oder nur journalist_tool und utils) auf die Journalisten-Maschine/SVS kopiert wird:
-# Im Projektverzeichnis auf der Journalisten-Maschine/SVS
-python -m venv venv
-source venv/bin/activate # oder .\venv\Scripts\activate
-pip install -r requirements.txt # Enthält nun weniger Abhängigkeiten
+1.  Klone das Repository oder lade die Projektdateien herunter.
+2.  Navigiere in das Hauptverzeichnis `whistledrop/`.
+3.  Erstelle eine virtuelle Python-Umgebung und aktiviere sie:
+    ```bash
+    python -m venv venv
+    source venv/bin/activate  # Linux/macOS
+    # .\venv\Scripts\activate    # Windows
+    ```
+4.  Installiere die benötigten Pakete:
+    ```bash
+    pip install -r requirements.txt
+    ```
 
-Administrative Aufgaben (Server-Administrator)
-Öffentliche RSA-Schlüssel (für Verschlüsselung) zur Server-Datenbank hinzufügen
-Die vom Journalisten erhaltenen öffentlichen RSA-Schlüssel (*_public_encryption.pem) auf den Server übertragen und hinzufügen:
-# Auf dem Server, im WhistleDrop-Projektverzeichnis
-source venv/bin/activate
-python utils/add_public_key_to_db.py /pfad/zu/den/uebertragenen/public_keys/
+### Verzeichnisse und Zertifikate erstellen
 
-API-Key für Journalist Interface sicher generieren und mitteilen
-Siehe "Umgebungsvariablen konfigurieren (Server)". Dieser Key wird vom Journalisten in der GUI oder für curl/Skripte benötigt, um auf das Journalist Interface zuzugreifen.
-WhistleDrop Server starten (Server-Administrator)
-Mit tor_manager.py (Empfohlen für Testen mit ephemerem Service)
-Startet Gunicorn (Flask App) und konfiguriert Tor Hidden Service für HTTPS:
-# Im WhistleDrop-Projektverzeichnis
-source venv/bin/activate
-python utils/tor_manager.py
+1.  **Verzeichnisse:** Obwohl einige Skripte versuchen, Verzeichnisse zu erstellen, stelle sicher, dass folgende existieren:
+    ```bash
+    mkdir -p whistledrop_server/data/submissions
+    mkdir -p whistledrop_server/data/db
+    mkdir -p whistledrop_server/certs
+    mkdir -p journalist_tool/private_keys
+    mkdir -p journalist_tool/public_keys_for_server
+    mkdir -p journalist_tool/decrypted_submissions
+    ```
+2.  **SSL-Zertifikate für Flask Server (HTTPS):**
+    Führe das Skript aus, um selbstsignierte Zertifikate zu generieren, die der Flask-Server für HTTPS verwendet (wichtig, wenn der Hidden Service auf ein HTTPS-Ziel zeigt).
+    ```bash
+    python utils/generate_ssl_certs.py
+    ```
+    Dies erstellt `cert.pem` und `key.pem` in `whistledrop_server/certs/`.
 
-Die .onion-Adresse für Whistleblower-Uploads UND das Journalist Interface wird ausgegeben.
-Mit manuellem Tor Hidden Service & Gunicorn (Produktion)
-Gunicorn Webserver (Flask App mit HTTPS) starten:
-source venv/bin/activate
-gunicorn --bind YOUR_SERVER_HOST:YOUR_FLASK_HTTPS_PORT \
-         --workers 4 \
-         --certfile whistledrop_server/certs/cert.pem \
-         --keyfile whistledrop_server/certs/key.pem \
-         whistledrop_server.wsgi:app
+### Journalist: RSA-Schlüsselpaare generieren
 
-Tor torrc konfigurieren:
-HiddenServiceDir /var/lib/tor/whistledrop_service/
-HiddenServiceVersion 3
-HiddenServicePort 443 127.0.0.1:YOUR_FLASK_HTTPS_PORT # Für Uploads & Journalist Interface
+Der Journalist generiert seine RSA-Schlüsselpaare mit dem Journalist GUI:
+1.  Starte das Journalist GUI (`python journalist_tool/journalist_gui.py`).
+2.  Gehe zum Tab "Key Generation".
+3.  Konfiguriere Anzahl, Präfix und optional ein Passwort.
+4.  Klicke "Generate Key Pairs".
+    *   Private Schlüssel werden in `journalist_tool/private_keys/` gespeichert.
+    *   Öffentliche Schlüssel (für den Server) in `journalist_tool/public_keys_for_server/`.
 
-Server neu starten/laden. .onion-Adresse aus /var/lib/tor/whistledrop_service/hostname entnehmen.
+### Server-Admin: Journalisten-Account erstellen
 
-Benutzung
-Whistleblower: Datei über HTTPS-Onion-Service hochladen
-Öffne https://<onion-address> (vom Admin erhalten) im Tor Browser.
-Datei auswählen und hochladen.
-Journalist: Metadaten über Journalist Interface abrufen
-Öffne https://<onion-address>/journalist (oder der konfigurierte Pfad) im Tor Browser.
-Authentifiziere dich (z.B. Basic Auth, wenn implementiert, oder API-Key im Header für Skripte).
-Oder: Nutze die Funktion im journalist_gui.py (Tab "Submissions"), die sich mit dem API-Key und Tor SOCKS Proxy mit dem Interface verbindet, um die Metadatenliste (Submission IDs, Key Hints) abzurufen.
-Notiere dir Submission IDs und die zugehörigen Key Hints für interessante Einreichungen.
-Server-Administrator: Einreichungen exportieren
-Auf dem WhistleDrop-Server (im Projektverzeichnis):
-source venv/bin/activate
-python utils/export_submissions.py --output_dir /pfad/zum/sicheren/exportverzeichnis/ [--all | --id SUBMISSION_ID1 --id SUBMISSION_ID2]****
+Bevor ein Journalist sich einloggen kann, muss ein Account für ihn auf dem Server erstellt werden:
+1.  Führe auf der Maschine, auf der der WhistleDrop-Server laufen wird, folgendes Skript aus:
+    ```bash
+    python utils/create_journalist_account.py
+    ```
+2.  Folge den Anweisungen, um einen Benutzernamen und ein Passwort für den Journalisten festzulegen. Diese Zugangsdaten werden gehasht in der `key_store.db` gespeichert.
 
---output_dir: Verzeichnis, in das die verschlüsselten Submission-Archive (z.B. ZIPs) gespeichert werden. Dieses Verzeichnis sollte auf einem Wechselmedium oder einem sicheren Transferpfad liegen.
---all: Exportiert alle noch nicht als "exportiert" markierten Submissions.
---id ID: Exportiert spezifische Submission IDs.
-Optional: Das Skript könnte eine lokale Datei pflegen, um bereits exportierte Submissions zu verfolgen, um Doppel-Exporte zu vermeiden, wenn --all verwendet wird.
-Übertrage die exportierten Archive (z.B. von /pfad/zum/sicheren/exportverzeichnis/) sicher auf ein USB-Laufwerk.
-Übergebe das USB-Laufwerk physisch an den Journalisten.
-Journalist: Exportierte Einreichungen importieren und entschlüsseln (GUI/CLI)
-Auf der Secure Viewing Station (SVS): Kopiere die Archive vom USB-Laufwerk in ein lokales Verzeichnis (z.B. journalist_tool/local_encrypted_submissions_import/). Entpacke sie, falls sie als Archive exportiert wurden (jede Submission in einem eigenen Unterordner).
-Mit der GUI (journalist_gui.py):
-Setup Tab:
-Konfiguriere die URL des "Journalist Interface" und deinen API-Key.
-Konfiguriere den "Local Encrypted Submissions Import Dir" (wo du die Daten von USB hinkopiert hast).
-Konfiguriere das "Default RSA Private Keys Dir" (wo deine privaten Entschlüsselungsschlüssel liegen).
-Submissions Tab:
-Klicke "Refresh Local Submissions": Listet Submissions aus dem lokalen Importverzeichnis.
-Optional: Klicke "Fetch New Submission Info from Server": Ruft Metadaten vom Journalist Interface ab, um sie mit lokalen Daten zu vergleichen oder neue, noch nicht exportierte Submissions zu sehen.
-Wähle eine (lokal vorhandene) Submission.
-Wähle den passenden privaten RSA-Schlüssel (anhand des Key Hints).
-Gib ggf. das Passwort für den RSA-Schlüssel ein.
-Klicke "Decrypt Submission".
-Mit dem CLI-Tool (decrypt_tool.py):
-python journalist_tool/decrypt_tool.py \
-    --submission_path /pfad/zur/lokalen/submission_id_verzeichnis/ \
-    --private_rsa_key /pfad/zum/privaten_rsa_schluessel.pem \
-    --output_dir /pfad/fuer/entschluesselte_datei/
+### Server-Admin: Öffentliche Schlüssel zum Server hochladen (via GUI)
+
+Nachdem der Journalist seine Schlüssel generiert und der Admin den Journalisten-Account erstellt hat:
+1.  Der Journalist startet das GUI, konfiguriert die Server-URL (z.B. die `.onion`-Adresse oder `https://127.0.0.1:<https_port>`) und den SOCKS-Proxy (z.B. `127.0.0.1:9050` für den vom `tor_manager.py` gestarteten Standalone Tor).
+2.  Der Journalist loggt sich mit seinem Benutzernamen und Passwort ein.
+3.  Im Tab "Connection & Admin" klickt der Journalist auf "Select & Upload Public Keys" und wählt die zuvor generierten öffentlichen Schlüssel aus `journalist_tool/public_keys_for_server/` aus.
+
+## WhistleDrop Server starten
+
+### Mit `tor_manager.py` (Empfohlen für Testen mit automatisiertem Standalone Tor & ephemerem Service)
+
+Dieses Skript automatisiert den Start eines lokalen Standalone Tor-Prozesses (Expert Bundle), die Erstellung eines ephemeren Hidden Service und den Start des Flask-Webservers.
+
+1.  **Standalone Tor (Expert Bundle) vorbereiten:**
+    *   Lade das Tor Expert Bundle von torproject.org herunter und entpacke es (z.B. nach `C:\Tor` oder `/opt/tor_expert_bundle`).
+    *   Erstelle eine `torrc`-Datei für diesen Standalone Tor (z.B. in `C:\Tor\data\torrc` oder `/opt/tor_expert_bundle/Data/Tor/torrc`) mit mindestens folgendem Inhalt (Pfade anpassen!):
+        ```torrc
+        DataDirectory /pfad/zu/deinem/tor_data_verzeichnis # z.B. C:\Tor\data
+        GeoIPFile /pfad/zu/deinem/tor_data_verzeichnis/geoip
+        GeoIPv6File /pfad/zu/deinem/tor_data_verzeichnis/geoip6
+        ControlPort 9051
+        CookieAuthentication 1
+        Log notice file /pfad/zu/deinem/tor_data_verzeichnis/notice.log
+        SocksPort 9050
+        SocksPolicy accept 127.0.0.1/32
+        SocksPolicy reject *
+        ```
+        Kopiere `geoip` und `geoip6` Dateien aus einer Tor Browser Installation in dein `DataDirectory`.
+    *   Passe die Pfade `TOR_EXE_PATH` und `TOR_RC_PATH` am Anfang von `utils/tor_manager.py` an deine Installation an.
+
+2.  **`tor_manager.py` starten:**
+    ```bash
+    python utils/tor_manager.py
+    ```
+    *   Das Skript startet den Standalone Tor, dann den Flask-Server und gibt die `.onion`-Adresse aus.
+    *   Standardmäßig wird ein HTTPS Hidden Service erstellt, der auf den lokalen HTTPS Flask-Server zeigt. Du kannst `USE_LOCAL_HTTPS_TARGET = False` in `tor_manager.py` setzen, um testweise einen HTTP Hidden Service zu erstellen, der auf einen lokalen HTTP Flask-Server zeigt.
+
+### Mit manuellem Tor Hidden Service & Gunicorn (Produktion)
+
+Für einen produktiven, persistenten Hidden Service:
+
+1.  **Flask-Anwendung mit Gunicorn bereitstellen:**
+    ```bash
+    gunicorn --bind 127.0.0.1:5001 'whistledrop_server.app:app' --certfile whistledrop_server/certs/cert.pem --keyfile whistledrop_server/certs/key.pem
+    # Port 5001 ist der HTTPS-Port, auf dem Flask lauscht.
+    # Für HTTP (nicht empfohlen für das Backend eines HTTPS .onion):
+    # gunicorn --bind 127.0.0.1:5000 'whistledrop_server.app:app'
+    ```
+2.  **Tor Hidden Service manuell konfigurieren:**
+    *   Bearbeite die `torrc`-Datei deines System-Tor-Dienstes.
+    *   Füge Zeilen für deinen Hidden Service hinzu (Beispiel für HTTPS .onion):
+        ```torrc
+        HiddenServiceDir /var/lib/tor/whistledrop_service/ # Pfad zum Speichern der HS-Schlüssel
+        HiddenServicePort 443 127.0.0.1:5001             # Leitet Port 443 des .onion auf lokalen HTTPS-Flask-Server
+        # Für HTTP .onion (wenn Flask auf HTTP Port 5000 lauscht):
+        # HiddenServicePort 80 127.0.0.1:5000
+        ```
+    *   Starte den Tor-Dienst neu. Die `.onion`-Adresse findest du in der Datei `hostname` im `HiddenServiceDir`.
+
+## Benutzung
+
+### Whistleblower: Datei hochladen
+1.  Öffne die `.onion`-Adresse (z.B. `https://<zufälligezeichen>.onion`) im Tor Browser.
+2.  Akzeptiere ggf. die Zertifikatswarnung (da das Zertifikat selbstsigniert ist).
+3.  Wähle eine Datei aus und klicke "Upload Securely".
+4.  Eine Erfolgsmeldung mit einer Submission ID wird angezeigt.
+
+### Journalist: Journalist GUI Tool verwenden
+1.  **Vorbereitung:** Stelle sicher, dass die Umgebungsvariablen `HTTP_PROXY`, `HTTPS_PROXY` und `NO_PROXY` korrekt gesetzt sind, wenn du das GUI startest (siehe [Umgebungsvariablen konfigurieren](#umgebungsvariablen-konfigurieren)).
+2.  Starte das GUI: `python journalist_tool/journalist_gui.py`.
+3.  **Konfiguration im Tab "Connection & Admin":**
+    *   **Server URL:** Gib die `.onion`-Adresse des WhistleDrop-Servers ein (z.B. `https://<onion-adresse>.onion` oder `http://...` je nach HS-Konfiguration) oder die lokale Adresse (z.B. `https://127.0.0.1:5001` für Tests).
+    *   **Tor SOCKS Proxy:** Host `127.0.0.1`, Port `9050` (für den vom `tor_manager.py` gestarteten Standalone Tor) oder `9150` (wenn du den SOCKS-Proxy des Tor Browsers verwenden möchtest und dieser läuft).
+    *   Klicke "Save Connection & Proxy Settings".
+4.  **Login:** Klicke auf "Login" und gib deinen Benutzernamen und dein Passwort ein.
+5.  **Schlüssel hochladen:** Lade deine zuvor generierten öffentlichen RSA-Schlüssel über "Select & Upload Public Keys" hoch.
+6.  **Submissions abrufen (Tab "Submissions"):**
+    *   Klicke "Refresh Submissions List".
+    *   Wähle eine Submission aus.
+    *   Wähle den passenden privaten Schlüssel über "Select Private Key...".
+    *   Gib ggf. das Passwort für den privaten Schlüssel ein.
+    *   Klicke "Decrypt Submission" und speichere die entschlüsselte Datei.
+
+## Wichtige Sicherheitshinweise & Limitierungen
+
+*   **Prototyp-Status:** Dies ist eine Prototyp-Implementierung. Sie wurde nicht umfassend auf Sicherheit geprüft und sollte **nicht für den produktiven Umgang mit echten, hochsensiblen Whistleblower-Daten verwendet werden.**
+*   **Selbstsignierte Zertifikate:** Die Verwendung von HTTPS mit selbstsignierten Zertifikaten (sowohl für den lokalen Flask-Server als auch potenziell für den `.onion`-Dienst) führt zu Browser-Warnungen.
+*   **Server-Sicherheit:** Die Sicherheit des zugrundeliegenden Serversystems ist entscheidend.
+*   **Metadaten:** Obwohl die Plattform versucht, Metadaten zu minimieren, können Dateiformate selbst Metadaten enthalten. Whistleblower sollten entsprechend geschult werden (z.B. Verwendung von Tails, Metadaten-Bereinigungstools).
+*   **Kein Virenscan:** Hochgeladene Dateien werden nicht auf Malware gescannt. Journalisten müssen äußerste Vorsicht walten lassen und Dateien in isolierten Umgebungen prüfen.
+*   **Rate Limiting:** Aktuell kein robustes Rate Limiting implementiert, was den Server anfällig für DoS-Angriffe oder das schnelle "Verbrauchen" von Public Keys machen könnte.
+
+## Mögliche zukünftige Verbesserungen
+
+*   Implementierung eines robusten Rate-Limitings.
+*   Verbesserte Fehlerbehandlung und Logging.
+*   Option für Journalisten, Public Keys direkt im GUI zu verwalten (z.B. als "verbraucht" markierte Keys wieder freizugeben, falls ein Upload fehlschlug).
+*   Integration eines Virenscanners (serverseitig, in einer Sandbox).
+*   Zwei-Faktor-Authentifizierung für Journalisten-Logins.
+*   Detailliertere Anleitung zur Absicherung des Serverbetriebs.
+*   Unterstützung für persistente Hidden Services direkt im `tor_manager.py`.
+*   Verbesserung der Robustheit des automatischen Tor-Starts im `tor_manager.py` (z.B. besseres Warten auf "Bootstrapped 100%").
